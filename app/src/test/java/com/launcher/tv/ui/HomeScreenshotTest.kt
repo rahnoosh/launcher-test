@@ -17,7 +17,9 @@ import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.widget.FrameLayout
 import com.launcher.tv.alerts.AlertOverlay
+import com.launcher.tv.dream.ScreensaverLayout
 import com.launcher.tv.alerts.LiveAlert
+import com.launcher.tv.alerts.OverlayCard
 import com.launcher.tv.data.iptv.ChannelCandidate
 import com.launcher.tv.data.iptv.XtreamChannel
 import org.junit.Rule
@@ -64,6 +66,19 @@ class HomeScreenshotTest {
         }
     }
 
+    @Test fun quickSettings() {
+        paparazzi.snapshot {
+            HomeBaseTheme {
+                HomeLayout(sampleState().copy(sleepMinutes = 45), HomeCallbacks(), initialTab = HomeTab.FOR_YOU, initialQuickSettings = true)
+            }
+        }
+    }
+
+    @Test fun screensaver() {
+        val data = sampleState().data
+        paparazzi.snapshot { HomeBaseTheme { ScreensaverLayout(data, startNow = System.currentTimeMillis()) } }
+    }
+
     /** The live alert card drawn over whatever is playing. */
     @Test fun alertCard() {
         val ctx = paparazzi.context
@@ -77,7 +92,7 @@ class HomeScreenshotTest {
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(AndroidColor.rgb(38, 52, 40), AndroidColor.rgb(14, 18, 24)))
         }
         frame.addView(
-            AlertOverlay.buildCard(ctx, alert),
+            AlertOverlay.buildCard(ctx, OverlayCard.from(alert) {}),
             FrameLayout.LayoutParams((380 * d).toInt(), FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END).apply {
                 topMargin = (24 * d).toInt(); rightMargin = (28 * d).toInt()
             },

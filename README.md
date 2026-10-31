@@ -128,6 +128,41 @@ While a card is showing, press **OK** to switch to that game, or **Back** to dis
 alerts can be turned off in Settings. There are no alerts for the game you're already watching in HomeBase
 Player.
 
+## 9. Quick settings and sleep timer
+
+The gear at the top right opens **Quick settings**, a strip of tiles along the bottom like the PS5 control
+centre:
+
+| Tile | Opens |
+|---|---|
+| Network | Wi-Fi & Ethernet settings |
+| Remotes & Bluetooth | Pairing remotes, headphones, controllers |
+| Display / Sound | Picture, HDR, resolution, audio output |
+| Sleep timer | Each press steps Off → 30 → 60 → 90 → 120 min |
+| Screensaver | Preview of the HomeBase screensaver |
+| HomeBase | Provider login, alerts, Trakt |
+| All settings | The full Android TV settings |
+
+The **sleep timer** runs in the HomeBase Home button service (step 4). A minute before the end, a card appears:
+press **OK** for 30 more minutes, or do nothing and the box goes to standby. If HDMI-CEC is on, the TV turns off
+too.
+
+## 10. Screensaver
+
+HomeBase includes a screensaver. It shows a big clock, your shows' artwork and team colours slowly zooming, live
+scores, and what's on in the next three days. It shifts a few pixels every minute to protect OLED screens.
+Google TV doesn't list third-party screensavers in its menus, so switch it on over adb:
+
+```sh
+adb shell settings put secure screensaver_components com.launcher.tv/com.launcher.tv.dream.HomeBaseDream
+adb shell settings put secure screensaver_enabled 1
+```
+
+It starts after the same idle time as Google TV's own screensaver. To go back to Google's ambient mode,
+put back the component that was there before. You can see it first with
+`adb shell settings get secure screensaver_components`; on Google TV it's usually
+`com.google.android.apps.tv.dreamx/.service.Backdrop`.
+
 ## Notes and limits
 
 

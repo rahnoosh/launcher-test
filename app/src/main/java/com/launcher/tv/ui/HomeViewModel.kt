@@ -17,6 +17,8 @@ import com.launcher.tv.data.iptv.XtreamClient
 import com.launcher.tv.data.trakt.TraktClient
 import com.launcher.tv.alerts.AlertSettings
 import com.launcher.tv.player.Watch
+import com.launcher.tv.service.HomeButtonService
+import com.launcher.tv.system.SleepTimer
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -60,6 +62,9 @@ data class HomeUiState(
     val busy: String? = null,
     val alerts: Boolean = true,
     val scoringAlerts: Boolean = true,
+    val sleepMinutes: Int = 0,
+    /** The HomeBase accessibility service is on (Home button, alerts, sleep timer). */
+    val serviceRunning: Boolean = false,
 )
 
 class HomeViewModel(app: Application) : AndroidViewModel(app) {
@@ -214,6 +219,29 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     fun onResume() {
         refresh(force = false)
         reloadApps()
+        refreshSystemState()
+    }
+
+    fun refreshSystemState() {
+        _state.update {
+            it.copy(
+                sleepMinutes = SleepTimer.minutesLeft(getApplication()),
+                serviceRunning = HomeButtonService.running,
+            )
+        }
+    }
+
+    /** Off -> 30 -> 60 -> 90 -> 120 -> Off. */
+    fun cycleSleepTimer() {
+        val app = getApplication<Application>()
+        val next = SleepTimer.nextStep(SleepTimer.minutesLeft(app))
+        SleepTimer.set(app, next)
+        val msg = when {
+            next == 0 -> "Sleep timer off"
+            !HomeButtonService.running -> "Sleep timer set, but it needs the HomeBase Home button service switched on (see README)"
+            else -> "Going to sleep in $next minutes"
+        }
+        _state.update { it.copy(sleepMinutes = next, serviceRunning = HomeButtonService.running, message = msg) }
     }
 
     fun refresh(force: Boolean) {

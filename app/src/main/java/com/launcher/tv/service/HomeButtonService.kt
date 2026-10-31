@@ -9,7 +9,11 @@ import com.launcher.tv.MainActivity
 import com.launcher.tv.alerts.AlertOverlay
 import com.launcher.tv.alerts.LiveAlert
 import com.launcher.tv.alerts.LiveAlertEngine
+import com.launcher.tv.alerts.OverlayCard
 import com.launcher.tv.player.Watch
+import com.launcher.tv.system.SleepTimer
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,8 +26,8 @@ import kotlinx.coroutines.launch
  *  1. it catches the Home key on the remote, and
  *  2. if the stock launcher still comes to the front (e.g. backing out of an app), it opens HomeBase over it.
  *
- * It also runs the live sports alerts: a card in the corner over whatever is playing.
- * While a card is showing, OK switches to that game and Back dismisses it.
+ * It also runs the live sports alerts (a card in the corner over whatever is playing; while it shows,
+ * OK switches to that game and Back dismisses it) and the sleep timer.
  */
 class HomeButtonService : AccessibilityService() {
 
@@ -41,9 +45,42 @@ class HomeButtonService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        running = true
         val o = AlertOverlay(this)
         overlay = o
-        scope.launch { LiveAlertEngine(this@HomeButtonService) { alert -> o.show(alert) }.run() }
+        scope.launch { LiveAlertEngine(this@HomeButtonService) { alert -> o.show(OverlayCard.from(alert) { watch(alert) }) }.run() }
+        scope.launch {
+            while (isActive) {
+                checkSleepTimer()
+                delay(15_000)
+            }
+        }
+    }
+
+    private fun checkSleepTimer() {
+        val end = SleepTimer.endsAt(this)
+        if (end <= 0) return
+        val left = end - System.currentTimeMillis()
+        if (left <= 0) {
+            SleepTimer.clear(this)
+            overlay?.hide()
+            // Screen off / standby. With HDMI-CEC on, the TV follows.
+            performGlobalAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
+        } else if (left <= 65_000 && !SleepTimer.warned(this)) {
+            SleepTimer.setWarned(this)
+            overlay?.show(
+                OverlayCard(
+                    kicker = "SLEEP TIMER",
+                    title = "Going to sleep in 1 minute",
+                    detail = "Press OK for 30 more minutes",
+                    teams = emptyList(),
+                    badge = "Zz",
+                    hint = "OK  +30 min     BACK  dismiss",
+                    onOk = { SleepTimer.extend(this, 30) },
+                ),
+                durationMs = 55_000,
+            )
+        }
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
@@ -55,8 +92,9 @@ class HomeButtonService : AccessibilityService() {
                         swallowNextUp = true
                     } else {
                         swallowNextUp = false
-                        o.current?.let { watch(it) }
+                        val action = o.current?.onOk
                         o.hide()
+                        action?.invoke()
                     }
                     return true
                 }
@@ -87,6 +125,7 @@ class HomeButtonService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
+        running = false
         overlay?.hide()
         scope.cancel()
         super.onDestroy()
@@ -99,6 +138,12 @@ class HomeButtonService : AccessibilityService() {
                 else -> Unit
             }
         }
+    }
+
+    companion object {
+        /** True while the service is enabled and connected (needed for alerts and the sleep timer). */
+        @Volatile var running = false
+            private set
     }
 
     private fun openHome() {

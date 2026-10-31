@@ -76,6 +76,7 @@ import com.launcher.tv.data.iptv.ChannelCandidate
 import android.content.Intent
 import android.provider.Settings
 import com.launcher.tv.player.PlayerActivity
+import com.launcher.tv.dream.ScreensaverActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -103,6 +104,10 @@ class HomeCallbacks(
     val setAlerts: (Boolean) -> Unit = {},
     val setScoringAlerts: (Boolean) -> Unit = {},
     val openAndroidSettings: () -> Unit = {},
+    val openSystemSettings: (QuickAction) -> Unit = {},
+    val cycleSleepTimer: () -> Unit = {},
+    val previewScreensaver: () -> Unit = {},
+    val refreshSystemState: () -> Unit = {},
 )
 
 @Composable
@@ -136,9 +141,11 @@ fun HomeScreen(vm: HomeViewModel) {
             loadIptvStatus = vm::loadIptvStatus,
             setAlerts = vm::setAlerts,
             setScoringAlerts = vm::setScoringAlerts,
-            openAndroidSettings = {
-                runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            },
+            openAndroidSettings = { openSystemSettings(context, QuickAction.ALL) },
+            openSystemSettings = { openSystemSettings(context, it) },
+            cycleSleepTimer = vm::cycleSleepTimer,
+            previewScreensaver = { context.startActivity(Intent(context, ScreensaverActivity::class.java)) },
+            refreshSystemState = vm::refreshSystemState,
         )
     }
     HomeLayout(state, callbacks)
@@ -156,6 +163,7 @@ fun HomeLayout(
     callbacks: HomeCallbacks,
     initialTab: HomeTab = HomeTab.FOR_YOU,
     initialSelectedKey: String? = null,
+    initialQuickSettings: Boolean = false,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -192,6 +200,7 @@ fun HomeLayout(
         )
     }
     var showSettings by remember { mutableStateOf(false) }
+    var showQuick by remember { mutableStateOf(initialQuickSettings) }
     val context = LocalContext.current
 
     // Look up the channel for the selected game so the hero can say where it's on.
@@ -209,6 +218,8 @@ fun HomeLayout(
     // Back returns to the first tile, like a console home screen.
     if (LocalOnBackPressedDispatcherOwner.current != null) {
         BackHandler { selectedKey = null; focusFirstTile() }
+        // Registered after the one above, so it wins while Quick settings is open.
+        BackHandler(enabled = showQuick) { showQuick = false }
     }
 
     var firstTabEffect by remember { mutableStateOf(true) }
@@ -233,7 +244,7 @@ fun HomeLayout(
                 state = state,
                 onRefresh = callbacks.refresh,
                 onAccount = { if (state.trakt == TraktState.SignedIn) showAccount = true else callbacks.connectTrakt() },
-                onSettings = { callbacks.loadIptvStatus(); showSettings = true },
+                onSettings = { callbacks.refreshSystemState(); showQuick = true },
             )
 
             // ---- tile row ----
@@ -297,6 +308,25 @@ fun HomeLayout(
 
         (state.trakt as? TraktState.AwaitingCode)?.let { TraktCodeDialog(it, callbacks.cancelTraktAuth) }
         if (showAccount) AccountDialog(onSignOut = { callbacks.signOutTrakt(); showAccount = false }, onDismiss = { showAccount = false })
+        if (showQuick) {
+            ControlCenter(
+                sleepMinutesLeft = state.sleepMinutes,
+                status = mapOf(
+                    QuickAction.SCREENSAVER to "Preview",
+                    QuickAction.HOMEBASE to if (state.iptv) "Provider connected" else "Provider, alerts",
+                    QuickAction.WIFI to "Wi-Fi & Ethernet",
+                    QuickAction.DISPLAY to "Picture & HDR",
+                ),
+                onAction = { a ->
+                    when (a) {
+                        QuickAction.SLEEP -> callbacks.cycleSleepTimer()
+                        QuickAction.SCREENSAVER -> { showQuick = false; callbacks.previewScreensaver() }
+                        QuickAction.HOMEBASE -> { showQuick = false; callbacks.loadIptvStatus(); showSettings = true }
+                        else -> { showQuick = false; callbacks.openSystemSettings(a) }
+                    }
+                },
+            )
+        }
         if (showSettings) {
             SettingsDialog(
                 state = state,
