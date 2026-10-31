@@ -154,7 +154,7 @@ fun RowsLayout(
         Column(Modifier.fillMaxSize().padding(start = 84.dp)) {
             // Preview text
             Box(Modifier.fillMaxWidth().height(286.dp).padding(top = 34.dp, end = 44.dp)) {
-                preview?.let { Billboard(it, state, Modifier.align(Alignment.TopStart)) }
+                preview?.let { Billboard(it, state, Modifier.align(Alignment.CenterStart).padding(bottom = 20.dp)) }
                 TopRight(state, Modifier.align(Alignment.TopEnd))
             }
             // Rows
@@ -197,7 +197,7 @@ fun RowsLayout(
 
         NavRail(
             tab = tab,
-            expanded = railFocused,
+            expanded = railFocused || initialRailOpen,
             onFocus = { railFocused = it },
             onTab = { tab = it },
             onSettings = { callbacks.refreshSystemState(); overlays.quick = true },
@@ -246,7 +246,7 @@ private fun Billboard(tile: Tile, state: HomeUiState, modifier: Modifier) {
                     listOfNotNull(
                         when {
                             e.finished -> "Final"
-                            e.live -> e.status ?: "Live"
+                            e.live -> (if (e.home != null) Spoilers.stripScore(e.status) else e.status) ?: "Live"
                             else -> friendlyTime(e.startMillis)
                         },
                         if (state.iptv && channel != null && !e.finished) "on $channel" else e.venue,
@@ -410,7 +410,7 @@ private fun GameCardFace(tile: Tile.Game) {
         Caption(
             if (home != null) e.title else e.title.substringBefore(":"),
             when {
-                e.live -> e.status ?: "Live"
+                e.live -> (if (home != null) Spoilers.stripScore(e.status) else e.status) ?: "Live"
                 e.finished -> if (home != null && home.score == null) "Final · score hidden" else "Final"
                 else -> friendlyTime(e.startMillis)
             },
