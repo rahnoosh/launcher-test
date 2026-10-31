@@ -89,19 +89,19 @@ class TraktClient(context: Context) {
         }
     }
 
-    private suspend fun authedGet(path: String): String {
+    private fun authHeaders() = mapOf(
+        "trakt-api-version" to "2",
+        "trakt-api-key" to clientId,
+        "Authorization" to "Bearer ${prefs.getString(KEY_ACCESS, "")}",
+    )
+
+    private suspend fun authedGet(path: String): String = authed { Http.get("$BASE$path", authHeaders()) }
+
+    suspend fun authedPost(path: String, body: String): String = authed { Http.post("$BASE$path", body, authHeaders()) }
+
+    private suspend fun authed(call: suspend () -> String): String {
         if (System.currentTimeMillis() > prefs.getLong(KEY_EXPIRES, Long.MAX_VALUE) - 86_400_000L) {
             refreshToken()
-        }
-        val call = suspend {
-            Http.get(
-                "$BASE$path",
-                mapOf(
-                    "trakt-api-version" to "2",
-                    "trakt-api-key" to clientId,
-                    "Authorization" to "Bearer ${prefs.getString(KEY_ACCESS, "")}",
-                ),
-            )
         }
         return try {
             call()
@@ -110,6 +110,20 @@ class TraktClient(context: Context) {
             refreshToken()
             call()
         }
+    }
+
+    // ---------- Search (used by the player to identify what's playing) ----------
+
+    suspend fun searchShow(query: String, year: Int?): TraktShow? =
+        search("show", query, year).firstNotNullOfOrNull { it.show }
+
+    suspend fun searchMovie(query: String, year: Int?): TraktMovie? =
+        search("movie", query, year).firstNotNullOfOrNull { it.movie }
+
+    private suspend fun search(type: String, query: String, year: Int?): List<SearchResult> {
+        val q = java.net.URLEncoder.encode(query, "UTF-8")
+        val y = year?.let { "&years=$it" }.orEmpty()
+        return Http.json.decodeFromString(authedGet("/search/$type?query=$q&fields=title,aliases&limit=5$y"))
     }
 
     // ---------- Data ----------

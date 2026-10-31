@@ -35,6 +35,7 @@ import coil.compose.AsyncImage
 import com.launcher.tv.data.AppEntry
 import com.launcher.tv.data.MediaItem
 import com.launcher.tv.data.SportsEvent
+import com.launcher.tv.data.history.HistoryEntry
 
 val Accent = Color(0xFFE5A00D)
 val LiveRed = Color(0xFFE53935)
@@ -46,10 +47,12 @@ private fun FocusCard(
     width: Dp,
     height: Dp,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     Card(
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = Modifier.size(width, height),
         shape = CardDefaults.shape(Shape),
         colors = CardDefaults.colors(containerColor = CardBg, focusedContainerColor = CardBg),
@@ -74,6 +77,36 @@ fun WideMediaCard(item: MediaItem, caption: String? = null, onClick: () -> Unit)
             if (caption != null) Text(caption, color = Accent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(item.subtitle, color = Color(0xFFCCCCCC), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/** Something played through TiviMate, with a resume progress bar. Long-press removes it. */
+@Composable
+fun HistoryCard(entry: HistoryEntry, onClick: () -> Unit, onLongClick: () -> Unit) {
+    FocusCard(260.dp, 146.dp, onClick, onLongClick) {
+        if (entry.imageUrl != null) {
+            AsyncImage(entry.imageUrl, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        } else {
+            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF2A2F3A), Color(0xFF151920)))))
+        }
+        Box(Modifier.fillMaxSize().background(scrim))
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth()) {
+            Column(Modifier.padding(horizontal = 10.dp)) {
+                val caption = when {
+                    entry.finished -> "WATCHED"
+                    entry.progress > 0.01f -> "RESUME · ${(entry.progress * 100).toInt()}%"
+                    else -> null
+                }
+                if (caption != null) Text(caption, color = Accent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text(entry.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (entry.subtitle.isNotBlank()) {
+                    Text(entry.subtitle, color = Color(0xFFCCCCCC), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+            Box(Modifier.padding(top = 8.dp).fillMaxWidth().height(4.dp).background(Color(0x55FFFFFF))) {
+                Box(Modifier.fillMaxWidth(entry.progress).height(4.dp).background(Accent))
+            }
         }
     }
 }

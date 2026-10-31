@@ -7,6 +7,8 @@ import com.launcher.tv.data.AppEntry
 import com.launcher.tv.data.AppsRepository
 import com.launcher.tv.data.HomeData
 import com.launcher.tv.data.HomeRepository
+import com.launcher.tv.data.history.HistoryEntry
+import com.launcher.tv.data.history.WatchHistory
 import com.launcher.tv.data.trakt.TraktClient
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
@@ -26,6 +28,7 @@ sealed interface TraktState {
 data class HomeUiState(
     val data: HomeData = HomeData(),
     val apps: List<AppEntry> = emptyList(),
+    val history: List<HistoryEntry> = emptyList(),
     val refreshing: Boolean = false,
     val trakt: TraktState = TraktState.SignedOut,
     val message: String? = null,
@@ -35,6 +38,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private val traktClient = TraktClient(app)
     private val repo = HomeRepository(app, traktClient)
     val apps = AppsRepository(app)
+    private val history = WatchHistory.get(app)
 
     private val _state = MutableStateFlow(HomeUiState(trakt = currentTraktState()))
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
@@ -50,6 +54,14 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             refresh(force = false)
         }
         reloadApps()
+        viewModelScope.launch {
+            history.load()
+            history.entries.collect { list -> _state.update { it.copy(history = list) } }
+        }
+    }
+
+    fun removeFromHistory(entry: HistoryEntry) {
+        viewModelScope.launch { history.remove(entry.url) }
     }
 
     fun onResume() {

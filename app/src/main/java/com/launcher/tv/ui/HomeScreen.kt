@@ -38,6 +38,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import com.launcher.tv.data.AppsRepository
+import com.launcher.tv.player.PlayerActivity
 import kotlinx.coroutines.delay
 
 private val Background = Color(0xFF0E1116)
@@ -64,6 +65,17 @@ fun HomeScreen(vm: HomeViewModel) {
             verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
             item { Header(state, vm) }
+
+            // ---- What you played in TiviMate (via the HomeBase player bridge) ----
+            if (state.history.isNotEmpty()) row("Recently watched in TiviMate") {
+                items(state.history.take(20), key = { it.url }) { entry ->
+                    HistoryCard(
+                        entry,
+                        onClick = { context.startActivity(PlayerActivity.intent(context, entry)) },
+                        onLongClick = { vm.removeFromHistory(entry) },
+                    )
+                }
+            }
 
             // ---- TV & movies (Trakt) ----
             when (state.trakt) {

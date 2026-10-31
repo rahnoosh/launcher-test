@@ -4,6 +4,7 @@ A replacement home screen built around what you actually watch:
 
 | Row | Source |
 |---|---|
+| **Recently watched in TiviMate**: movies and episodes you played, with resume points | HomeBase player bridge |
 | **Continue watching**: next episode of every show you're on | Trakt |
 | **New episodes coming up**: the next 14 days of your shows | Trakt calendar |
 | **Your teams**: Alabama Crimson Tide, Patriots, Lakers, Dodgers | ESPN public API |
@@ -70,11 +71,32 @@ To undo it: *Settings → System → Accessibility → HomeBase Home button → 
 
 Open HomeBase, select **Connect Trakt**, then enter the on-screen code at `trakt.tv/activate` on your phone.
 
+## 6. Record what you watch in TiviMate (player bridge)
+
+TiviMate doesn't share its watch history with other apps. Instead, HomeBase includes its own video player
+(**HomeBase Player**, built on ExoPlayer) that you set as TiviMate's external player. Everything you play then goes
+through HomeBase:
+
+- It shows up in **Recently watched in TiviMate** with a progress bar. Select it to resume where you stopped;
+  long-press to remove it.
+- It's matched to Trakt from the title and **scrobbled**: Trakt marks it watched once you pass 80%, so
+  *Continue watching* moves on to the next episode by itself.
+
+Setup: in TiviMate (external players need TiviMate Premium) open *Settings → Playback* and set the player for
+movies/series to **External player → HomeBase Player**. Menu names vary a little between TiviMate versions. If Android
+shows an "Open with" list, choose *HomeBase Player → Always*. Keep TiviMate's own player for live TV: live channels
+aren't recorded or scrobbled.
+
+How titles are matched: IPTV titles like `EN - The Bear S03 E05` or `|EN| Dune: Part Two (2024) [4K]` are
+cleaned up before searching Trakt
+([`TitleParser.kt`](app/src/main/java/com/launcher/tv/player/TitleParser.kt), with tests). Titles that
+can't be parsed are still saved to the history but not scrobbled.
+
 ## Notes and limits
 
-- **TiviMate history:** TiviMate doesn't share its watch history with other apps, so HomeBase reads your
-  history from Trakt. The planned next step is a small "player bridge": set HomeBase as TiviMate's external player
-  for VOD. It would scrobble what you watch to Trakt and then play it, so TiviMate viewing ends up in *Continue watching*.
+- **Player bridge:** this needs TiviMate to pass the title to the external player. If it only passes the stream
+  URL, history still works but Trakt scrobbling can't identify the video. Streams ExoPlayer can't decode (rare codecs
+  such as DTS audio) show an error; use TiviMate's own player for those.
 - **UFC PPVs:** from 2026 the numbered UFC events stream on Paramount+ rather than as pay-per-view.
   HomeBase shows every numbered event (`UFC 3xx`), which are the cards that used to be PPV.
 - **Boxing** comes from TheSportsDB's free tier, which can lag behind fight announcements.

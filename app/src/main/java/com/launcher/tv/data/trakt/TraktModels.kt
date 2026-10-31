@@ -66,3 +66,11 @@ data class TokenResponse(
     @SerialName("expires_in") val expiresIn: Long,
     @SerialName("created_at") val createdAt: Long,
 )
+
+@Serializable
+data class SearchResult(
+    val type: String = "",
+    val score: Double = 0.0,
+    val show: TraktShow? = null,
+    val movie: TraktMovie? = null,
+)
