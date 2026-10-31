@@ -21,7 +21,7 @@ import com.launcher.tv.dream.ScreensaverLayout
 import com.launcher.tv.alerts.LiveAlert
 import com.launcher.tv.alerts.OverlayCard
 import com.launcher.tv.data.iptv.ChannelCandidate
-import com.launcher.tv.data.iptv.XtreamChannel
+import com.launcher.tv.data.iptv.IptvChannel
 import com.launcher.tv.data.sports.GameDetail
 import com.launcher.tv.data.sports.GameDetails
 import kotlinx.serialization.json.Json
@@ -60,7 +60,7 @@ class HomeScreenshotTest {
             channels = mapOf(
                 "espn-lal" to ChannelLookup(
                     candidates = listOf(
-                        ChannelCandidate(XtreamChannel("1", "US: ESPN FHD", tvArchive = "1"), 120, "network, in TV guide", "NBA: Lakers at Warriors"),
+                        ChannelCandidate(IptvChannel("p1", "1", "US: ESPN FHD", archive = true), 120, "network, in TV guide", "NBA: Lakers at Warriors"),
                     ),
                 ),
             ),
