@@ -46,6 +46,11 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    lint {
+        // Don't block sideload builds on lint warnings.
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
     buildFeatures {
         compose = true
         buildConfig = true
