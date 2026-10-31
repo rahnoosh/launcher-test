@@ -76,7 +76,11 @@ fun buildSlides(d: HomeData, now: Long): List<Slide> {
         .sortedBy { it.startMillis }.take(3)
         .map { e ->
             val colors = listOfNotNull(e.away?.mainColor(), e.home?.mainColor()).ifEmpty { listOf(leagueColor(e.league)) }
-            Slide("g-${e.id}", if (e.live) "Live now · ${e.league}" else e.league, e.title, whenText(e.startMillis, now), e.imageUrl.takeIf { e.home == null }, colors)
+            Slide(
+                "g-${e.id}", if (e.live) "Live now · ${e.league}" else e.league, e.title,
+                if (e.live) listOfNotNull(e.status, e.broadcast).joinToString(" · ") else listOfNotNull(whenText(e.startMillis, now), e.broadcast).joinToString(" · "),
+                e.imageUrl.takeIf { e.home == null }, colors,
+            )
         }
     // Interleave so sports and shows alternate.
     val out = mutableListOf<Slide>()
