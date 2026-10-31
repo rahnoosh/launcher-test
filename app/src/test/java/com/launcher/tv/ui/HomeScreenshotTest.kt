@@ -52,6 +52,26 @@ class HomeScreenshotTest {
         theme = "android:Theme.Material.NoActionBar",
     )
 
+    // ---- Rows layout (default) ----
+    @Test fun rowsHome() = rows(HomeTab.FOR_YOU, null)
+    @Test fun rowsLiveGame() = rows(HomeTab.FOR_YOU, "g-espn-lal")
+    @Test fun rowsSports() = rows(HomeTab.SPORTS, "g-espn-ne")
+    @Test fun rowsRailOpen() = rows(HomeTab.FOR_YOU, null, railOpen = true)
+
+    private fun rows(tab: HomeTab, selected: String?, railOpen: Boolean = false) {
+        val state = sampleState().copy(
+            data = sampleState().data.let { d ->
+                d.copy(
+                    upNext = d.upNext.map { it.copy(overview = "Mark leads a team of office workers whose memories have been surgically divided between their work and personal lives.") },
+                )
+            },
+        )
+        paparazzi.snapshot {
+            HomeBaseTheme { RowsLayout(state, HomeCallbacks(), initialTab = tab, initialSelectedKey = selected, initialRailOpen = railOpen) }
+        }
+    }
+
+    // ---- Tiles layout ----
     @Test fun forYou() = snap(HomeTab.FOR_YOU, null)
     @Test fun forYouLiveGame() = snap(HomeTab.FOR_YOU, "g-espn-lal")
     @Test fun sports() = snap(HomeTab.SPORTS, "g-espn-ne")

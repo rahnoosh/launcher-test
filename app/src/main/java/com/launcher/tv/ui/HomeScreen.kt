@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -120,6 +121,7 @@ class HomeCallbacks(
     val watchFromCheck: (CheckRow) -> Unit = {},
     val tiviMateFromCheck: (CheckRow) -> Unit = {},
     val setTiviMateTuning: (Boolean) -> Unit = {},
+    val setLayout: (String) -> Unit = {},
     val testTiviMateTuning: () -> Unit = {},
 )
 
@@ -170,9 +172,10 @@ fun HomeScreen(vm: HomeViewModel) {
             tiviMateFromCheck = vm::tiviMateFromCheck,
             setTiviMateTuning = vm::setTiviMateTuning,
             testTiviMateTuning = vm::testTiviMateTuning,
+            setLayout = vm::setLayout,
         )
     }
-    HomeLayout(state, callbacks)
+    if (state.layout == "tiles") HomeLayout(state, callbacks) else RowsLayout(state, callbacks)
 }
 
 /**
@@ -207,7 +210,7 @@ fun HomeLayout(
         hero = selected
     }
 
-    var showAccount by remember { mutableStateOf(false) }
+    val overlays = remember { OverlayState(initialQuickSettings) }
     val listState = rememberLazyListState()
     val firstTile = remember { FocusRequester() }
 
@@ -229,8 +232,6 @@ fun HomeLayout(
             iptv = state.iptv,
         )
     }
-    var showSettings by remember { mutableStateOf(false) }
-    var showQuick by remember { mutableStateOf(initialQuickSettings) }
     val context = LocalContext.current
 
     // Look up the channel for the selected game so the hero can say where it's on.
@@ -249,7 +250,7 @@ fun HomeLayout(
     if (LocalOnBackPressedDispatcherOwner.current != null) {
         BackHandler { selectedKey = null; focusFirstTile() }
         // Registered after the one above, so it wins while Quick settings is open.
-        BackHandler(enabled = showQuick) { showQuick = false }
+        BackHandler(enabled = overlays.quick) { overlays.quick = false }
     }
 
     var firstTabEffect by remember { mutableStateOf(true) }
@@ -273,8 +274,8 @@ fun HomeLayout(
                 onTab = { tab = it },
                 state = state,
                 onRefresh = callbacks.refresh,
-                onAccount = { if (state.trakt == TraktState.SignedIn) showAccount = true else callbacks.connectTrakt() },
-                onSettings = { callbacks.refreshSystemState(); showQuick = true },
+                onAccount = { if (state.trakt == TraktState.SignedIn) overlays.account = true else callbacks.connectTrakt() },
+                onSettings = { callbacks.refreshSystemState(); overlays.quick = true },
             )
 
             // ---- tile row ----
@@ -336,50 +337,7 @@ fun HomeLayout(
             }
         }
 
-        (state.trakt as? TraktState.AwaitingCode)?.let { TraktCodeDialog(it, callbacks.cancelTraktAuth) }
-        if (showAccount) AccountDialog(onSignOut = { callbacks.signOutTrakt(); showAccount = false }, onDismiss = { showAccount = false })
-        if (showQuick) {
-            ControlCenter(
-                sleepMinutesLeft = state.sleepMinutes,
-                status = mapOf(
-                    QuickAction.SCREENSAVER to "Preview",
-                    QuickAction.HOMEBASE to if (state.iptv) "Provider connected" else "Provider, alerts",
-                    QuickAction.WIFI to "Wi-Fi & Ethernet",
-                    QuickAction.DISPLAY to "Picture & HDR",
-                    QuickAction.SPOILERS to if (state.spoilers) "On" else "Off",
-                ),
-                active = if (state.spoilers) setOf(QuickAction.SPOILERS) else emptySet(),
-                onAction = { a ->
-                    when (a) {
-                        QuickAction.SLEEP -> callbacks.cycleSleepTimer()
-                        QuickAction.SPOILERS -> callbacks.setSpoilers(!state.spoilers)
-                        QuickAction.SCREENSAVER -> { showQuick = false; callbacks.previewScreensaver() }
-                        QuickAction.HOMEBASE -> { showQuick = false; callbacks.loadIptvStatus(); showSettings = true }
-                        else -> { showQuick = false; callbacks.openSystemSettings(a) }
-                    }
-                },
-            )
-        }
-        if (showSettings) {
-            SettingsDialog(
-                state = state,
-                callbacks = callbacks,
-                onAddXtream = { showXtreamForm(context) { s, u, p -> callbacks.addXtream(s, u, p) } },
-                onAddM3u = { showM3uForm(context) { url, epg -> callbacks.addM3u(url, epg) } },
-                onDismiss = { showSettings = false },
-            )
-        }
-        state.streamCheck?.let { check ->
-            StreamCheckDialog(check, onWatch = callbacks.watchFromCheck, onTiviMate = callbacks.tiviMateFromCheck, onDismiss = callbacks.closeStreamCheck)
-        }
-        state.picker?.let { event ->
-            ChannelPicker(
-                event = event,
-                lookup = state.channels[event.id],
-                onPick = { callbacks.watchGame(event, it, false) },
-                onDismiss = callbacks.closePicker,
-            )
-        }
+        HomeOverlays(state, callbacks, overlays)
     }
 }
 
@@ -540,6 +498,10 @@ private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXt
                 PillButton("Alerts: " + if (state.alerts) "On" else "Off", { callbacks.setAlerts(!state.alerts) })
                 PillButton("Scoring plays: " + if (state.scoringAlerts) "On" else "Off", { callbacks.setScoringAlerts(!state.scoringAlerts) })
             }
+            SettingsSection("Home screen layout", "Rows: preview on top, rows of cards below. Tiles: console-style tile row.") {
+                PillButton("Rows", { callbacks.setLayout("rows") }, primary = state.layout != "tiles")
+                PillButton("Tiles", { callbacks.setLayout("tiles") }, primary = state.layout == "tiles")
+            }
             SettingsSection("Spoiler mode", "Hides scores of live and finished games until you choose Show score") {
                 PillButton("Spoiler mode: " + if (state.spoilers) "On" else "Off", { callbacks.setSpoilers(!state.spoilers) })
             }
@@ -663,4 +625,61 @@ private fun showXtreamForm(context: android.content.Context, onSave: (String, St
         .setPositiveButton("Connect") { _, _ -> onSave(server.text.toString(), user.text.toString(), pass.text.toString()) }
         .setNegativeButton("Cancel", null)
         .show()
+}
+
+/** Which home-screen overlays are open; shared by both layouts. */
+class OverlayState(quick: Boolean = false) {
+    var quick by mutableStateOf(quick)
+    var settings by mutableStateOf(false)
+    var account by mutableStateOf(false)
+}
+
+/** Dialogs and panels on top of the home screen (both layouts). */
+@Composable
+fun BoxScope.HomeOverlays(state: HomeUiState, callbacks: HomeCallbacks, o: OverlayState) {
+    val context = LocalContext.current
+    (state.trakt as? TraktState.AwaitingCode)?.let { TraktCodeDialog(it, callbacks.cancelTraktAuth) }
+    if (o.account) AccountDialog(onSignOut = { callbacks.signOutTrakt(); o.account = false }, onDismiss = { o.account = false })
+    if (o.quick) {
+        ControlCenter(
+            sleepMinutesLeft = state.sleepMinutes,
+            status = mapOf(
+                QuickAction.SCREENSAVER to "Preview",
+                QuickAction.HOMEBASE to if (state.iptv) "Provider connected" else "Provider, alerts",
+                QuickAction.WIFI to "Wi-Fi & Ethernet",
+                QuickAction.DISPLAY to "Picture & HDR",
+                QuickAction.SPOILERS to if (state.spoilers) "On" else "Off",
+            ),
+            active = if (state.spoilers) setOf(QuickAction.SPOILERS) else emptySet(),
+            onAction = { a ->
+                when (a) {
+                    QuickAction.SLEEP -> callbacks.cycleSleepTimer()
+                    QuickAction.SPOILERS -> callbacks.setSpoilers(!state.spoilers)
+                    QuickAction.SCREENSAVER -> { o.quick = false; callbacks.previewScreensaver() }
+                    QuickAction.HOMEBASE -> { o.quick = false; callbacks.loadIptvStatus(); o.settings = true }
+                    else -> { o.quick = false; callbacks.openSystemSettings(a) }
+                }
+            },
+        )
+    }
+    if (o.settings) {
+        SettingsDialog(
+            state = state,
+            callbacks = callbacks,
+            onAddXtream = { showXtreamForm(context) { s, u, p -> callbacks.addXtream(s, u, p) } },
+            onAddM3u = { showM3uForm(context) { url, epg -> callbacks.addM3u(url, epg) } },
+            onDismiss = { o.settings = false },
+        )
+    }
+    state.streamCheck?.let { check ->
+        StreamCheckDialog(check, onWatch = callbacks.watchFromCheck, onTiviMate = callbacks.tiviMateFromCheck, onDismiss = callbacks.closeStreamCheck)
+    }
+    state.picker?.let { event ->
+        ChannelPicker(
+            event = event,
+            lookup = state.channels[event.id],
+            onPick = { callbacks.watchGame(event, it, false) },
+            onDismiss = callbacks.closePicker,
+        )
+    }
 }

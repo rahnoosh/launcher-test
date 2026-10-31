@@ -23,6 +23,8 @@ data class MediaItem(
     val year: Int? = null,
     val season: Int? = null,
     val episode: Int? = null,
+    /** TMDB description of the show or movie. */
+    val overview: String? = null,
 )
 
 @Serializable

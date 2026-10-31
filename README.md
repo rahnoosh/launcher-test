@@ -184,6 +184,17 @@ While a card is showing, press **OK** to switch to that game, or **Back** to dis
 alerts can be turned off in Settings. There are no alerts for the game you're already watching in HomeBase
 Player.
 
+## Home screen layouts
+
+**Rows** (the default) looks like a streaming app: a menu on the left (Home, TV & Movies, Sports, Apps, Refresh,
+Quick settings), a large preview of the selected item with its description on top, and rows of wide cards below:
+Continue Watching, Live Now, Next Up, Your Teams, Recent Results, New Episodes, Fight Night, NFL This Week,
+Formula 1, My Watchlist and Apps. **OK** plays or watches. **Hold OK** opens more options; for a game, that's its
+game page, with Best stream, Start over, Channels and Show score.
+
+**Tiles** is the console-style layout with a row of square tiles. Switch layouts in Quick settings → HomeBase →
+Home screen layout.
+
 ## 9. Quick settings and sleep timer
 
 The gear at the top right opens **Quick settings**, a strip of tiles along the bottom like the PS5 control

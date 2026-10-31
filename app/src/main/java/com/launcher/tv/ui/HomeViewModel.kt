@@ -68,6 +68,8 @@ data class HomeUiState(
     val alerts: Boolean = true,
     val scoringAlerts: Boolean = true,
     val sleepMinutes: Int = 0,
+    /** "rows" (streaming-app style, default) or "tiles" (console style). */
+    val layout: String = "rows",
     /** Experimental: type the channel number into TiviMate over local ADB. */
     val tiviMateTuning: Boolean = false,
     /** "Best stream" dialog for an event. */
@@ -95,6 +97,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             scoringAlerts = AlertSettings.scoring(app),
             spoilers = com.launcher.tv.data.Spoilers.enabled(app),
             tiviMateTuning = com.launcher.tv.player.TiviMateTuner.enabled(app),
+            layout = app.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).getString("layout", "rows") ?: "rows",
             revealed = com.launcher.tv.data.Spoilers.revealed(app),
         )
     )
@@ -289,6 +292,11 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         val event = _state.value.streamCheck?.event
         closeStreamCheck()
         com.launcher.tv.player.TiviMateHelper.openOrTune(getApplication(), event, row.candidate.channel, row.provider)
+    }
+
+    fun setLayout(layout: String) {
+        getApplication<Application>().getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).edit().putString("layout", layout).apply()
+        _state.update { it.copy(layout = layout) }
     }
 
     fun setTiviMateTuning(on: Boolean) {

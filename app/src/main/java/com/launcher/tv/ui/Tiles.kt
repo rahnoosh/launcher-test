@@ -171,3 +171,51 @@ private fun MediaItem.toStrip() = StripItem(
     teams = emptyList(),
     imageUrl = imageUrl,
 )
+
+/** One row of cards in the Rows layout. */
+data class HomeRow(val title: String, val tiles: List<Tile>)
+
+fun buildRows(tab: HomeTab, s: HomeUiState): List<HomeRow> {
+    val d = s.data
+    val signedIn = s.trakt == TraktState.SignedIn
+    val traktPrompt: List<Tile> = when (s.trakt) {
+        TraktState.SignedOut, is TraktState.AwaitingCode -> listOf(Tile.ConnectTrakt)
+        else -> emptyList()
+    }
+    val sports = (d.myTeams + d.nfl + d.fights + d.f1).distinctBy { it.id }
+    val live = sports.filter { it.live }
+    val liveIds = live.map { it.id }.toSet()
+    val teamIds = d.myTeams.map { it.id }.toSet()
+    fun games(list: List<com.launcher.tv.data.SportsEvent>) = list.filter { it.id !in liveIds }.map<com.launcher.tv.data.SportsEvent, Tile> { Tile.Game(it) }
+    fun media(list: List<com.launcher.tv.data.MediaItem>, role: Tile.Role) = list.map<com.launcher.tv.data.MediaItem, Tile> { Tile.Media(it, role) }
+
+    val continueWatching = HomeRow("Continue Watching", s.history.filter { !it.finished }.take(15).map { Tile.Resume(it) })
+    val liveNow = HomeRow("Live Now", live.map { Tile.Game(it) })
+    val nextUp = HomeRow("Next Up", (if (signedIn) media(d.upNext, Tile.Role.UP_NEXT) else emptyList()) + traktPrompt)
+    val teams = HomeRow("Your Teams", games(d.myTeams))
+    val results = HomeRow("Recent Results", d.results.map { Tile.Game(it) })
+    val newEpisodes = HomeRow("New Episodes", if (signedIn) media(d.upcomingEpisodes, Tile.Role.UPCOMING) else emptyList())
+    val fights = HomeRow("Fight Night", games(d.fights))
+    val nfl = HomeRow("NFL This Week", games(d.nfl.filter { it.id !in teamIds }))
+    val f1 = HomeRow("Formula 1", games(d.f1))
+    val watchlist = HomeRow("My Watchlist", if (signedIn) media(d.watchlist, Tile.Role.WATCHLIST) else emptyList())
+    val apps = s.apps.map { Tile.App(it) }
+
+    val rows = when (tab) {
+        HomeTab.FOR_YOU -> listOf(continueWatching, liveNow, nextUp, teams, results, newEpisodes, fights, nfl, f1, watchlist, HomeRow("Apps", apps.take(12)))
+        HomeTab.TV -> listOf(continueWatching, nextUp, newEpisodes, watchlist)
+        HomeTab.SPORTS -> listOf(liveNow, teams, results, fights, nfl, f1)
+        HomeTab.APPS -> apps.chunked(6).mapIndexed { i, chunk -> HomeRow(if (i == 0) "Apps" else "", chunk) }
+    }.filter { it.tiles.isNotEmpty() }
+
+    if (rows.isNotEmpty()) return rows
+    return listOf(
+        HomeRow(
+            "",
+            listOf(
+                if (s.refreshing) Tile.Message("Loading…", "Fetching your shows and games")
+                else Tile.Message("Nothing here yet", if (tab == HomeTab.SPORTS) "No upcoming games found" else ""),
+            ),
+        )
+    )
+}
