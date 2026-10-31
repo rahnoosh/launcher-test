@@ -422,7 +422,7 @@ private fun GameCardFace(tile: Tile.Game) {
 }
 
 @Composable
-private fun Art(url: String?, title: String) {
+private fun androidx.compose.foundation.layout.BoxScope.Art(url: String?, title: String) {
     if (url != null) {
         AsyncImage(url, title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
     } else {
