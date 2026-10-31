@@ -12,6 +12,14 @@ import com.launcher.tv.data.MediaKind
 import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.TeamInfo
 import com.launcher.tv.data.history.HistoryEntry
+import android.graphics.Color as AndroidColor
+import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
+import android.widget.FrameLayout
+import com.launcher.tv.alerts.AlertOverlay
+import com.launcher.tv.alerts.LiveAlert
+import com.launcher.tv.data.iptv.ChannelCandidate
+import com.launcher.tv.data.iptv.XtreamChannel
 import org.junit.Rule
 import org.junit.Test
 
@@ -38,6 +46,44 @@ class HomeScreenshotTest {
     @Test fun forYouLiveGame() = snap(HomeTab.FOR_YOU, "g-espn-lal")
     @Test fun sports() = snap(HomeTab.SPORTS, "g-espn-ne")
     @Test fun tvAndMovies() = snap(HomeTab.TV, null)
+
+    /** Provider connected: the live game knows its channel and offers Start over / Channels. */
+    @Test fun liveGameWithIptv() {
+        val state = sampleState().copy(
+            iptv = true,
+            channels = mapOf(
+                "espn-lal" to ChannelLookup(
+                    candidates = listOf(
+                        ChannelCandidate(XtreamChannel("1", "US: ESPN FHD", tvArchive = "1"), 120, "network, in TV guide", "NBA: Lakers at Warriors"),
+                    ),
+                ),
+            ),
+        )
+        paparazzi.snapshot {
+            HomeBaseTheme { HomeLayout(state, HomeCallbacks(), initialTab = HomeTab.SPORTS, initialSelectedKey = "g-espn-lal") }
+        }
+    }
+
+    /** The live alert card drawn over whatever is playing. */
+    @Test fun alertCard() {
+        val ctx = paparazzi.context
+        val d = ctx.resources.displayMetrics.density
+        val alert = LiveAlert(
+            key = "k", kicker = "TOUCHDOWN", title = "Patriots score", detail = "NE 14 – 10 BUF · Q3 4:12",
+            teams = listOf(TeamInfo("Patriots", "NE", color = "002244", altColor = "C60C30"), TeamInfo("Bills", "BUF", color = "00338D", altColor = "FFFFFF")),
+            event = SportsEvent("espn-ne", "Patriots @ Bills", "NFL", 0L),
+        )
+        val frame = FrameLayout(ctx).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(AndroidColor.rgb(38, 52, 40), AndroidColor.rgb(14, 18, 24)))
+        }
+        frame.addView(
+            AlertOverlay.buildCard(ctx, alert),
+            FrameLayout.LayoutParams((380 * d).toInt(), FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END).apply {
+                topMargin = (24 * d).toInt(); rightMargin = (28 * d).toInt()
+            },
+        )
+        paparazzi.snapshot(frame)
+    }
 
     private fun snap(tab: HomeTab, selected: String?) {
         paparazzi.snapshot {

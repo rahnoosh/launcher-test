@@ -28,10 +28,12 @@ class AlertOverlay(private val service: AccessibilityService) {
 
     val isShowing: Boolean get() = view != null
 
+    private fun dp(v: Int): Int = (v * service.resources.displayMetrics.density).toInt()
+
     fun show(alert: LiveAlert, durationMs: Long = 12_000L) {
         hide()
         current = alert
-        val v = build(alert)
+        val v = buildCard(service, alert)
         val lp = WindowManager.LayoutParams(
             dp(380), WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
@@ -58,7 +60,14 @@ class AlertOverlay(private val service: AccessibilityService) {
         current = null
     }
 
-    private fun build(a: LiveAlert): View {
+    companion object {
+        /** The card itself; public so screenshot tests can render it. */
+        fun buildCard(context: android.content.Context, a: LiveAlert): View = CardBuilder(context).build(a)
+    }
+}
+
+private class CardBuilder(private val service: android.content.Context) {
+    fun build(a: LiveAlert): View {
         val root = LinearLayout(service).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
