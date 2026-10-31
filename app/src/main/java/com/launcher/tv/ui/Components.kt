@@ -218,7 +218,7 @@ private fun Artwork(url: String?, title: String, w: Float) {
         val c = seedColor(title)
         Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(c.copy(alpha = 1f), c.darker(0.6f)))))
         val longest = title.split(' ').maxOfOrNull { it.length }?.coerceAtLeast(3) ?: 3
-        val fs = minOf(w * 0.16f, (w - 14f) / (longest * 0.72f))
+        val fs = minOf(w * 0.16f, (w - 14f) / (longest * 0.9f))
         Box(Modifier.fillMaxSize().padding(7.dp), contentAlignment = Alignment.Center) {
             Text(
                 title.uppercase(),
