@@ -95,14 +95,14 @@ class HomeScreenshotTest {
         val now = System.currentTimeMillis()
         val hour = 3_600_000L
         val day = 24 * hour
-        val lal = TeamInfo("Lakers", "LAL", "552583", "FDB927", score = "87")
-        val gsw = TeamInfo("Warriors", "GSW", "1D428A", "FFC72C", score = "82")
-        val ne = TeamInfo("Patriots", "NE", "002244", "C60C30")
-        val buf = TeamInfo("Bills", "BUF", "00338D", "C60C30")
-        val lsu = TeamInfo("LSU", "LSU", "461D7C", "FDD023")
-        val bama = TeamInfo("Alabama", "ALA", "9E1B32", "FFFFFF")
-        val kc = TeamInfo("Chiefs", "KC", "E31837", "FFB612")
-        val den = TeamInfo("Broncos", "DEN", "FB4F14", "002244")
+        val lal = TeamInfo("Lakers", "LAL", color = "552583", altColor = "FDB927", score = "87")
+        val gsw = TeamInfo("Warriors", "GSW", color = "1D428A", altColor = "FFC72C", score = "82")
+        val ne = TeamInfo("Patriots", "NE", color = "002244", altColor = "C60C30")
+        val buf = TeamInfo("Bills", "BUF", color = "00338D", altColor = "C60C30")
+        val lsu = TeamInfo("LSU", "LSU", color = "461D7C", altColor = "FDD023")
+        val bama = TeamInfo("Alabama", "ALA", color = "9E1B32", altColor = "FFFFFF")
+        val kc = TeamInfo("Chiefs", "KC", color = "E31837", altColor = "FFB612")
+        val den = TeamInfo("Broncos", "DEN", color = "FB4F14", altColor = "002244")
         return HomeUiState(
             trakt = TraktState.SignedIn,
             history = listOf(
