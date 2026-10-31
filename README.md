@@ -92,7 +92,44 @@ cleaned up before searching Trakt
 ([`TitleParser.kt`](app/src/main/java/com/launcher/tv/player/TitleParser.kt), with tests). Titles that
 can't be parsed are still saved to the history but not scrobbled.
 
+## 7. Connect your IPTV provider (Xtream Codes)
+
+Open **Settings** (the gear at the top right) and choose **IPTV provider, Set up**. Enter the same Xtream Codes
+server, username and password you use in TiviMate. You can also paste your M3U link
+(`http://host:port/get.php?username=…&password=…`) into the server box, and HomeBase fills in the rest. The
+login is stored only on the box.
+
+After that:
+
+- **Games:** *Watch* tunes straight to the game in HomeBase Player. HomeBase picks the channel by looking for:
+  1. a channel you picked before for that team or network,
+  2. event channels named after the teams (e.g. `NFL 05: Patriots vs Bills`),
+  3. the network ESPN lists (CBS, ESPN, SEC Network, local affiliates…),
+  4. the TV guide, once the game is under 6 hours away.
+
+  When it isn't sure, it shows **Channels** so you can choose, and remembers your choice. *Start over* plays a
+  live game from kickoff using catch-up, if your provider has catch-up for that channel.
+- **Shows and movies:** *Play S04E03* on a next-up show, or *Play* on a watchlist movie, finds it in your
+  provider's catalogue and plays it. Playback is scrobbled to Trakt with exact IDs.
+- Channel lists and catalogues download once a day in the background.
+
+## 8. Live alerts
+
+While the HomeBase Home button service is on (step 4), a card appears in the top-right corner over any app,
+TiviMate included:
+
+- *Starting in 10 min* for your teams, numbered UFC events, big boxing cards and F1 races
+- *Kickoff*, *Tip-off* or *First pitch*
+- Scoring plays: touchdowns, field goals and runs. Basketball only gets *Close game* in the 4th quarter, so
+  there isn't an alert for every basket.
+- *Final*
+
+While a card is showing, press **OK** to switch to that game, or **Back** to dismiss it. Alerts and scoring-play
+alerts can be turned off in Settings. There are no alerts for the game you're already watching in HomeBase
+Player.
+
 ## Notes and limits
+
 
 - **Player bridge:** this needs TiviMate to pass the title to the external player. If it only passes the stream
   URL, history still works but Trakt scrobbling can't identify the video. Streams ExoPlayer can't decode (rare codecs

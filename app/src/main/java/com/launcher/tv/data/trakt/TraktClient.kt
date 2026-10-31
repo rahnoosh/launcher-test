@@ -156,6 +156,11 @@ class TraktClient(context: Context) {
                         imageUrl = Tmdb.backdrop(Tmdb.Type.TV, ws.show.ids.tmdb),
                         posterUrl = Tmdb.poster(Tmdb.Type.TV, ws.show.ids.tmdb),
                         timeMillis = aired,
+                        traktId = id,
+                        tmdbId = ws.show.ids.tmdb,
+                        year = ws.show.year,
+                        season = next.season,
+                        episode = next.number,
                     )
                 }
             }
@@ -175,6 +180,9 @@ class TraktClient(context: Context) {
                     subtitle = w.movie.year?.toString().orEmpty(),
                     imageUrl = Tmdb.backdrop(Tmdb.Type.MOVIE, w.movie.ids.tmdb),
                     posterUrl = Tmdb.poster(Tmdb.Type.MOVIE, w.movie.ids.tmdb),
+                    traktId = w.movie.ids.trakt,
+                    tmdbId = w.movie.ids.tmdb,
+                    year = w.movie.year,
                 )
             }
         }.awaitAll()
@@ -195,6 +203,11 @@ class TraktClient(context: Context) {
                     imageUrl = Tmdb.backdrop(Tmdb.Type.TV, c.show.ids.tmdb),
                     posterUrl = Tmdb.poster(Tmdb.Type.TV, c.show.ids.tmdb),
                     timeMillis = parseTime(c.firstAired),
+                    traktId = c.show.ids.trakt,
+                    tmdbId = c.show.ids.tmdb,
+                    year = c.show.year,
+                    season = c.episode.season,
+                    episode = c.episode.number,
                 )
             }
         }.awaitAll().sortedBy { it.timeMillis ?: Long.MAX_VALUE }

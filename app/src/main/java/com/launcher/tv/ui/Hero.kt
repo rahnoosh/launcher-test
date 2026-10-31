@@ -41,12 +41,18 @@ class HomeActions(
     val launchApp: (String) -> Unit,
     val showApps: () -> Unit,
     val connectTrakt: () -> Unit,
+    val watchGame: (SportsEvent, Boolean) -> Unit = { _, _ -> },
+    val pickChannel: (SportsEvent) -> Unit = {},
+    val playMedia: (com.launcher.tv.data.MediaItem) -> Unit = {},
+    /** IPTV login saved: Watch/Play go straight to the stream. */
+    val iptv: Boolean = false,
 )
 
 /** What pressing OK on a tile does: the same as its hero's primary button. */
 fun Tile.primaryAction(a: HomeActions): () -> Unit = when (this) {
     is Tile.Resume -> { { a.play(entry) } }
-    is Tile.Media, is Tile.Game -> a.openTiviMate
+    is Tile.Media -> if (role == Tile.Role.UPCOMING) a.openTiviMate else { { a.playMedia(item) } }
+    is Tile.Game -> { { a.watchGame(event, false) } }
     is Tile.App -> { { a.launchApp(app.packageName) } }
     Tile.AllApps -> a.showApps
     Tile.ConnectTrakt -> a.connectTrakt
@@ -176,7 +182,7 @@ fun HeroShade() {
 // ---------------- foreground ----------------
 
 @Composable
-fun HeroContent(tile: Tile, actions: HomeActions, modifier: Modifier = Modifier) {
+fun HeroContent(tile: Tile, actions: HomeActions, modifier: Modifier = Modifier, channels: ChannelLookup? = null) {
     Column(modifier.widthIn(max = 560.dp)) {
         when (tile) {
             is Tile.Resume -> {
@@ -207,10 +213,18 @@ fun HeroContent(tile: Tile, actions: HomeActions, modifier: Modifier = Modifier)
                 Title(tile.title)
                 Meta(listOf(i.subtitle).filter { it.isNotBlank() })
                 Buttons {
-                    PillButton("Watch in TiviMate", actions.openTiviMate, primary = true, icon = R.drawable.ic_play)
+                    when {
+                        tile.role == Tile.Role.UPCOMING -> PillButton("Open TiviMate", actions.openTiviMate, primary = true, icon = R.drawable.ic_play)
+                        actions.iptv -> {
+                            val label = if (i.season != null && i.episode != null) "Play S%02dE%02d".format(i.season, i.episode) else "Play"
+                            PillButton(label, { actions.playMedia(i) }, primary = true, icon = R.drawable.ic_play)
+                            PillButton("TiviMate", actions.openTiviMate)
+                        }
+                        else -> PillButton("Watch in TiviMate", actions.openTiviMate, primary = true, icon = R.drawable.ic_play)
+                    }
                 }
             }
-            is Tile.Game -> GameHero(tile.event, actions)
+            is Tile.Game -> GameHero(tile.event, actions, channels)
             is Tile.App -> {
                 Eyebrow("App")
                 Title(tile.title)
@@ -236,7 +250,7 @@ fun HeroContent(tile: Tile, actions: HomeActions, modifier: Modifier = Modifier)
 }
 
 @Composable
-private fun GameHero(e: SportsEvent, actions: HomeActions) {
+private fun GameHero(e: SportsEvent, actions: HomeActions, channels: ChannelLookup?) {
     val home = e.home
     val away = e.away
     Eyebrow(listOfNotNull(if (e.live) "Live now" else null, e.league, e.broadcast).joinToString(" · "), live = e.live)
@@ -255,12 +269,25 @@ private fun GameHero(e: SportsEvent, actions: HomeActions) {
     } else {
         Title(e.title)
     }
+    val best = channels?.candidates?.firstOrNull()
+    val channelText = when {
+        !actions.iptv -> null
+        channels == null || channels.loading -> "Finding channel…"
+        best != null -> "on ${best.channel.name}"
+        else -> "No channel found"
+    }
     Meta(
-        if (e.live) listOfNotNull(if (home != null) e.status?.replace(Regex("""^\d+-\d+\s*"""), "") else e.status, e.venue)
-        else listOfNotNull(friendlyTime(e.startMillis), if (home == null) e.status else null, e.venue)
+        if (e.live) listOfNotNull(if (home != null) e.status?.replace(Regex("""^\d+-\d+\s*"""), "") else e.status, channelText ?: e.venue)
+        else listOfNotNull(friendlyTime(e.startMillis), if (home == null) e.status else null, channelText ?: e.venue)
     )
     Buttons {
-        PillButton("Watch in TiviMate", actions.openTiviMate, primary = true, icon = R.drawable.ic_play)
+        if (actions.iptv) {
+            PillButton(if (e.live) "Watch live" else "Watch", { actions.watchGame(e, false) }, primary = true, icon = R.drawable.ic_play)
+            if (e.live && best?.channel?.hasArchive == true) PillButton("Start over", { actions.watchGame(e, true) })
+            PillButton("Channels", { actions.pickChannel(e) })
+        } else {
+            PillButton("Watch in TiviMate", actions.openTiviMate, primary = true, icon = R.drawable.ic_play)
+        }
     }
 }
 

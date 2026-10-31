@@ -19,6 +19,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import com.launcher.tv.LauncherApp
+import com.launcher.tv.alerts.NowPlaying
 import com.launcher.tv.data.history.HistoryEntry
 import com.launcher.tv.data.history.WatchHistory
 import com.launcher.tv.data.trakt.TraktClient
@@ -51,6 +52,9 @@ class PlayerActivity : ComponentActivity() {
     private var scrobbling = false
     private var ended = false
     private var progressJob: Job? = null
+    /** Live TV started by HomeBase: no history, no scrobbling. */
+    private var forceLive = false
+    private var eventId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,6 +65,9 @@ class PlayerActivity : ComponentActivity() {
         rawTitle = readTitle(intent)
         headers = readHeaders(intent)
         parsed = TitleParser.parse(rawTitle, url)
+        forceLive = intent.getBooleanExtra(EXTRA_LIVE, false)
+        eventId = intent.getStringExtra(EXTRA_EVENT)
+        match = presetMatch(intent)
 
         val httpFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
@@ -89,7 +96,8 @@ class PlayerActivity : ComponentActivity() {
 
         lifecycleScope.launch {
             if (isVod()) saveHistory(moveToFront = true)
-            match = scrobbler.identify(parsed)
+            if (forceLive) return@launch
+            if (match == null && scrobbler.enabled) match = scrobbler.identify(parsed)
             match?.let { m ->
                 history.update(url) {
                     it.copy(title = m.displayTitle, subtitle = m.subtitle, imageUrl = m.imageUrl ?: it.imageUrl, posterUrl = m.posterUrl ?: it.posterUrl)
@@ -140,8 +148,14 @@ class PlayerActivity : ComponentActivity() {
         return playerView.dispatchKeyEvent(event) || super.dispatchKeyEvent(event)
     }
 
+    override fun onStart() {
+        super.onStart()
+        NowPlaying.eventId = eventId
+    }
+
     override fun onStop() {
         super.onStop()
+        if (NowPlaying.eventId == eventId) NowPlaying.eventId = null
         if (!::player.isInitialized) return
         if (!ended) {
             stopScrobble(progressPercent())
@@ -166,6 +180,7 @@ class PlayerActivity : ComponentActivity() {
     // ---------- Trakt ----------
 
     private fun startScrobble() {
+        if (!scrobbler.enabled) return
         val m = match ?: return
         if (scrobbling) return
         scrobbling = true
@@ -174,6 +189,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun pauseScrobble() {
+        if (!scrobbler.enabled) return
         val m = match ?: return
         if (!scrobbling) return
         scrobbling = false
@@ -182,6 +198,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun stopScrobble(progress: Float) {
+        if (!scrobbler.enabled) return
         val m = match ?: return
         scrobbling = false
         appScope.launch { scrobbler.stop(m, progress) }
@@ -190,7 +207,7 @@ class PlayerActivity : ComponentActivity() {
     // ---------- History / resume ----------
 
     private fun isVod(): Boolean =
-        parsed.kind != TitleParser.Kind.LIVE && ((::player.isInitialized && duration() > 0) || parsed.canScrobble)
+        !forceLive && parsed.kind != TitleParser.Kind.LIVE && ((::player.isInitialized && duration() > 0) || parsed.canScrobble)
 
     private fun duration(): Long = player.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0L
 
@@ -255,6 +272,48 @@ class PlayerActivity : ComponentActivity() {
     }
 
     companion object {
+        const val EXTRA_LIVE = "homebase.live"
+        const val EXTRA_EVENT = "homebase.event_id"
+        private const val EXTRA_TRAKT_SHOW = "homebase.trakt_show"
+        private const val EXTRA_TRAKT_MOVIE = "homebase.trakt_movie"
+        private const val EXTRA_SEASON = "homebase.season"
+        private const val EXTRA_EPISODE = "homebase.episode"
+        private const val EXTRA_SHOW_TITLE = "homebase.show_title"
+        private const val EXTRA_IMAGE = "homebase.image"
+        private const val EXTRA_POSTER = "homebase.poster"
+
+        fun liveIntent(context: Context, url: String, title: String, eventId: String?): Intent =
+            Intent(context, PlayerActivity::class.java).setData(Uri.parse(url))
+                .putExtra("title", title).putExtra(EXTRA_LIVE, true).putExtra(EXTRA_EVENT, eventId)
+
+        fun episodeIntent(
+            context: Context, url: String, title: String, showTitle: String, showTraktId: Long?,
+            season: Int, episode: Int, image: String?, poster: String?,
+        ): Intent = Intent(context, PlayerActivity::class.java).setData(Uri.parse(url))
+            .putExtra("title", title).putExtra(EXTRA_SHOW_TITLE, showTitle)
+            .putExtra(EXTRA_TRAKT_SHOW, showTraktId ?: 0L).putExtra(EXTRA_SEASON, season).putExtra(EXTRA_EPISODE, episode)
+            .putExtra(EXTRA_IMAGE, image).putExtra(EXTRA_POSTER, poster)
+
+        fun movieIntent(context: Context, url: String, title: String, movieTraktId: Long?, image: String?, poster: String?): Intent =
+            Intent(context, PlayerActivity::class.java).setData(Uri.parse(url))
+                .putExtra("title", title).putExtra(EXTRA_TRAKT_MOVIE, movieTraktId ?: 0L)
+                .putExtra(EXTRA_IMAGE, image).putExtra(EXTRA_POSTER, poster)
+
+        private fun presetMatch(intent: Intent): Scrobbler.Match? {
+            val image = intent.getStringExtra(EXTRA_IMAGE)
+            val poster = intent.getStringExtra(EXTRA_POSTER)
+            val show = intent.getLongExtra(EXTRA_TRAKT_SHOW, 0L)
+            if (show > 0) {
+                return Scrobbler.episodeMatch(
+                    show, intent.getIntExtra(EXTRA_SEASON, 0), intent.getIntExtra(EXTRA_EPISODE, 0),
+                    intent.getStringExtra(EXTRA_SHOW_TITLE) ?: "", image, poster,
+                )
+            }
+            val movie = intent.getLongExtra(EXTRA_TRAKT_MOVIE, 0L)
+            if (movie > 0) return Scrobbler.movieMatch(movie, intent.getStringExtra("title") ?: "", image, poster)
+            return null
+        }
+
         /** Play something from HomeBase's own history row. */
         fun intent(context: Context, entry: HistoryEntry): Intent =
             Intent(context, PlayerActivity::class.java)

@@ -27,6 +27,28 @@ class Scrobbler(private val trakt: TraktClient) {
 
     val enabled: Boolean get() = trakt.isConfigured && trakt.isSignedIn
 
+    companion object {
+        /** When HomeBase started the playback it already knows exactly what this is. */
+        fun episodeMatch(showTraktId: Long, season: Int, episode: Int, showTitle: String, imageUrl: String?, posterUrl: String?) = Match(
+            item = buildJsonObject {
+                putJsonObject("show") { putJsonObject("ids") { put("trakt", showTraktId) } }
+                putJsonObject("episode") { put("season", season); put("number", episode) }
+            },
+            displayTitle = showTitle,
+            subtitle = "S%02dE%02d".format(season, episode),
+            imageUrl = imageUrl,
+            posterUrl = posterUrl,
+        )
+
+        fun movieMatch(movieTraktId: Long, title: String, imageUrl: String?, posterUrl: String?) = Match(
+            item = buildJsonObject { putJsonObject("movie") { putJsonObject("ids") { put("trakt", movieTraktId) } } },
+            displayTitle = title,
+            subtitle = "",
+            imageUrl = imageUrl,
+            posterUrl = posterUrl,
+        )
+    }
+
     suspend fun identify(parsed: TitleParser.Parsed): Match? {
         if (!enabled || !parsed.canScrobble) return null
         return try {

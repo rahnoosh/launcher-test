@@ -140,14 +140,38 @@ object SportsRepository {
 
     // ---------------- ESPN parsing ----------------
 
-    private fun parseEspnEvent(el: JsonElement, league: String, useEventName: Boolean = false): SportsEvent? {
+    /** ESPN path for a league name used in [SportsEvent.league]. */
+    fun espnPath(league: String): String? = when (league) {
+        "NFL" -> "football/nfl"
+        "College Football" -> "football/college-football"
+        "NBA" -> "basketball/nba"
+        "MLB" -> "baseball/mlb"
+        else -> null
+    }
+
+    /** Today's scoreboard for a league, including finished games (used by live alerts). */
+    suspend fun liveScoreboard(league: String): List<SportsEvent>? = runCatchingNull {
+        val path = espnPath(league) ?: return@runCatchingNull emptyList()
+        // College scoreboards default to ranked games only; groups=80 is all of FBS.
+        val extra = if (league == "College Football") "?groups=80&limit=300" else ""
+        Http.getJson("$ESPN/$path/scoreboard$extra").obj()?.arr("events").orEmpty()
+            .mapNotNull { parseEspnEvent(it, league, includeFinished = true) }
+    }
+
+    private fun parseEspnEvent(
+        el: JsonElement,
+        league: String,
+        useEventName: Boolean = false,
+        includeFinished: Boolean = false,
+    ): SportsEvent? {
         val ev = el.obj() ?: return null
         val id = ev.str("id") ?: return null
         val start = parseTime(ev.str("date")) ?: return null
         val comp = ev.arr("competitions")?.firstOrNull()?.obj()
         val statusType = (comp?.obj("status") ?: ev.obj("status"))?.obj("type")
         val state = statusType?.str("state")             // "pre", "in", "post"
-        if (state == "post") return null
+        if (state == "post" && !includeFinished) return null
+        val period = ((comp?.obj("status") ?: ev.obj("status"))?.get("period") as? JsonPrimitive)?.contentOrNull?.toIntOrNull()
 
         val competitors = comp?.arr("competitors").orEmpty().mapNotNull { it.obj() }
         val home = competitors.firstOrNull { it.str("homeAway") == "home" }
@@ -168,6 +192,7 @@ object SportsRepository {
             return TeamInfo(
                 name = n,
                 abbr = t.str("abbreviation") ?: n.take(3).uppercase(),
+                fullName = t.str("displayName"),
                 color = t.str("color"),
                 altColor = t.str("alternateColor"),
                 logo = logo(c),
@@ -196,6 +221,8 @@ object SportsRepository {
             venue = comp?.obj("venue")?.str("fullName"),
             home = if (useEventName) null else team(home),
             away = if (useEventName) null else team(away),
+            period = period,
+            finished = state == "post",
         )
     }
 

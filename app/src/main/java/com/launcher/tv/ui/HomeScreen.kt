@@ -53,6 +53,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.tv.material3.LocalContentColor
+import android.app.AlertDialog
+import android.text.InputType
+import android.widget.EditText
+import android.widget.LinearLayout
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
@@ -62,6 +70,11 @@ import androidx.tv.material3.Text
 import com.launcher.tv.R
 import com.launcher.tv.data.AppsRepository
 import com.launcher.tv.data.history.HistoryEntry
+import com.launcher.tv.data.MediaItem
+import com.launcher.tv.data.SportsEvent
+import com.launcher.tv.data.iptv.ChannelCandidate
+import android.content.Intent
+import android.provider.Settings
 import com.launcher.tv.player.PlayerActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -79,6 +92,17 @@ class HomeCallbacks(
     val launchPackage: (String) -> Unit = {},
     val removeFromHistory: (HistoryEntry) -> Unit = {},
     val play: (HistoryEntry) -> Unit = {},
+    val watchGame: (SportsEvent, ChannelCandidate?, Boolean) -> Unit = { _, _, _ -> },
+    val resolveChannels: (SportsEvent) -> Unit = {},
+    val openPicker: (SportsEvent) -> Unit = {},
+    val closePicker: () -> Unit = {},
+    val playMedia: (MediaItem) -> Unit = {},
+    val saveXtream: (String, String, String) -> Unit = { _, _, _ -> },
+    val removeXtream: () -> Unit = {},
+    val loadIptvStatus: () -> Unit = {},
+    val setAlerts: (Boolean) -> Unit = {},
+    val setScoringAlerts: (Boolean) -> Unit = {},
+    val openAndroidSettings: () -> Unit = {},
 )
 
 @Composable
@@ -102,6 +126,19 @@ fun HomeScreen(vm: HomeViewModel) {
             launchPackage = vm::launchPackage,
             removeFromHistory = vm::removeFromHistory,
             play = { context.startActivity(PlayerActivity.intent(context, it)) },
+            watchGame = { e, c, startOver -> vm.watchGame(e, c, startOver) },
+            resolveChannels = vm::resolveChannels,
+            openPicker = vm::openPicker,
+            closePicker = { vm.closePicker() },
+            playMedia = vm::playMedia,
+            saveXtream = vm::saveXtream,
+            removeXtream = vm::removeXtream,
+            loadIptvStatus = vm::loadIptvStatus,
+            setAlerts = vm::setAlerts,
+            setScoringAlerts = vm::setScoringAlerts,
+            openAndroidSettings = {
+                runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            },
         )
     }
     HomeLayout(state, callbacks)
@@ -140,7 +177,7 @@ fun HomeLayout(
     val listState = rememberLazyListState()
     val firstTile = remember { FocusRequester() }
 
-    val actions = remember(callbacks) {
+    val actions = remember(callbacks, state.iptv) {
         HomeActions(
             openTiviMate = { callbacks.launchPackage(AppsRepository.TIVIMATE) },
             play = callbacks.play,
@@ -148,7 +185,18 @@ fun HomeLayout(
             launchApp = callbacks.launchPackage,
             showApps = { tab = HomeTab.APPS },
             connectTrakt = callbacks.connectTrakt,
+            watchGame = { e, startOver -> callbacks.watchGame(e, null, startOver) },
+            pickChannel = callbacks.openPicker,
+            playMedia = callbacks.playMedia,
+            iptv = state.iptv,
         )
+    }
+    var showSettings by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    // Look up the channel for the selected game so the hero can say where it's on.
+    LaunchedEffect(hero?.key, state.iptv) {
+        (hero as? Tile.Game)?.let { callbacks.resolveChannels(it.event) }
     }
 
     fun focusFirstTile() {
@@ -185,6 +233,7 @@ fun HomeLayout(
                 state = state,
                 onRefresh = callbacks.refresh,
                 onAccount = { if (state.trakt == TraktState.SignedIn) showAccount = true else callbacks.connectTrakt() },
+                onSettings = { callbacks.loadIptvStatus(); showSettings = true },
             )
 
             // ---- tile row ----
@@ -222,7 +271,9 @@ fun HomeLayout(
 
             Spacer(Modifier.weight(1f))
 
-            hero?.let { HeroContent(it, actions, Modifier.padding(start = 48.dp)) }
+            hero?.let { h ->
+                HeroContent(h, actions, Modifier.padding(start = 48.dp), channels = (h as? Tile.Game)?.let { state.channels[it.event.id] })
+            }
 
             Spacer(Modifier.height(22.dp))
 
@@ -246,6 +297,22 @@ fun HomeLayout(
 
         (state.trakt as? TraktState.AwaitingCode)?.let { TraktCodeDialog(it, callbacks.cancelTraktAuth) }
         if (showAccount) AccountDialog(onSignOut = { callbacks.signOutTrakt(); showAccount = false }, onDismiss = { showAccount = false })
+        if (showSettings) {
+            SettingsDialog(
+                state = state,
+                callbacks = callbacks,
+                onXtream = { showXtreamForm(context) { s, u, p -> callbacks.saveXtream(s, u, p) } },
+                onDismiss = { showSettings = false },
+            )
+        }
+        state.picker?.let { event ->
+            ChannelPicker(
+                event = event,
+                lookup = state.channels[event.id],
+                onPick = { callbacks.watchGame(event, it, false) },
+                onDismiss = callbacks.closePicker,
+            )
+        }
     }
 }
 
@@ -256,6 +323,7 @@ private fun TopBar(
     state: HomeUiState,
     onRefresh: () -> Unit,
     onAccount: () -> Unit,
+    onSettings: () -> Unit,
 ) {
     var clock by remember { mutableStateOf(clockText()) }
     LaunchedEffect(Unit) {
@@ -291,8 +359,18 @@ private fun TopBar(
 
         Spacer(Modifier.weight(1f))
 
-        if (state.refreshing) Text("updating…", color = Faint, fontSize = 10.sp, modifier = Modifier.padding(end = 12.dp))
+        val busy = state.busy
+        if (busy != null) {
+            Text(
+                busy, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(end = 12.dp).background(Color.White.copy(alpha = 0.14f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+        } else if (state.refreshing) {
+            Text("updating…", color = Faint, fontSize = 10.sp, modifier = Modifier.padding(end = 12.dp))
+        }
         CircleButton(onClick = onRefresh) { Icon(painterResource(R.drawable.ic_refresh), "Refresh", Modifier.size(15.dp)) }
+        Spacer(Modifier.width(10.dp))
+        CircleButton(onClick = onSettings) { Icon(painterResource(R.drawable.ic_settings), "Settings", Modifier.size(15.dp)) }
         Spacer(Modifier.width(10.dp))
         CircleButton(onClick = onAccount) {
             Box(
@@ -362,4 +440,117 @@ private fun AccountDialog(onSignOut: () -> Unit, onDismiss: () -> Unit) {
 @Composable
 fun HomeBaseTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = androidx.tv.material3.darkColorScheme(primary = Accent), content = content)
+}
+
+@Composable
+private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onXtream: () -> Unit, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(
+            Modifier.width(540.dp).background(Color(0xFF1C222B), RoundedCornerShape(16.dp)).padding(26.dp),
+        ) {
+            Text("Settings", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+
+            SettingsSection(
+                "IPTV provider (Xtream Codes)",
+                if (state.iptv) state.iptvStatus ?: "Connected" else "Not set up: Watch and Play open TiviMate instead",
+            ) {
+                PillButton(if (state.iptv) "Change login" else "Set up", onXtream, primary = true)
+                if (state.iptv) PillButton("Remove", callbacks.removeXtream)
+            }
+            SettingsSection(
+                "Live alerts",
+                "Pop-ups over any app for your teams, fights and F1. Needs the HomeBase Home button service switched on.",
+            ) {
+                PillButton("Alerts: " + if (state.alerts) "On" else "Off", { callbacks.setAlerts(!state.alerts) })
+                PillButton("Scoring plays: " + if (state.scoringAlerts) "On" else "Off", { callbacks.setScoringAlerts(!state.scoringAlerts) })
+            }
+            SettingsSection("Trakt", if (state.trakt == TraktState.SignedIn) "Connected" else "Not connected") {
+                if (state.trakt == TraktState.SignedIn) PillButton("Sign out", callbacks.signOutTrakt)
+                else PillButton("Connect", callbacks.connectTrakt)
+            }
+            SettingsSection("System", "Wi-Fi, display, inputs, accounts") {
+                PillButton("Android settings", callbacks.openAndroidSettings)
+                PillButton("Close", onDismiss, primary = true)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsSection(title: String, subtitle: String, buttons: @Composable () -> Unit) {
+    Column(Modifier.padding(top = 18.dp)) {
+        Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(subtitle, color = Dim, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) { buttons() }
+    }
+}
+
+@Composable
+private fun ChannelPicker(event: SportsEvent, lookup: ChannelLookup?, onPick: (ChannelCandidate) -> Unit, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(
+            Modifier.width(580.dp).heightIn(max = 470.dp).background(Color(0xFF1C222B), RoundedCornerShape(16.dp)).padding(22.dp),
+        ) {
+            Text("Pick a channel", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "${event.title} · ${event.broadcast ?: event.league}. HomeBase remembers your pick for this team and network.",
+                color = Dim, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp),
+            )
+            when {
+                lookup == null || lookup.loading -> Text("Searching your channels…", color = Dim, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp))
+                lookup.candidates.isEmpty() -> Text(lookup.error ?: "No matching channels found.", color = Dim, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp))
+            }
+            LazyColumn(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(lookup?.candidates.orEmpty(), key = { it.channel.streamId }) { c ->
+                    Surface(
+                        onClick = { onPick(c) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
+                        colors = ClickableSurfaceDefaults.colors(
+                            containerColor = Color.White.copy(alpha = 0.06f),
+                            contentColor = Color.White,
+                            focusedContainerColor = Color.White,
+                            focusedContentColor = Color(0xFF0B0D12),
+                        ),
+                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
+                    ) {
+                        Column(Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) {
+                            Text(c.channel.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                listOfNotNull(c.epgTitle?.let { "Guide: $it" }, c.reason.ifBlank { null }).joinToString("  ·  "),
+                                fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                color = LocalContentColor.current.copy(alpha = 0.7f),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Native form: the TV keyboard works far better with real EditTexts than with Compose text fields. */
+private fun showXtreamForm(context: android.content.Context, onSave: (String, String, String) -> Unit) {
+    val pad = (20 * context.resources.displayMetrics.density).toInt()
+    fun field(hint: String, password: Boolean = false) = EditText(context).apply {
+        this.hint = hint
+        isSingleLine = true
+        inputType = if (password) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+    }
+    val server = field("Server, e.g. http://line.example.com:8080 (or paste your M3U link)")
+    val user = field("Username")
+    val pass = field("Password", password = true)
+    val layout = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(pad, pad / 2, pad, 0)
+        addView(server); addView(user); addView(pass)
+    }
+    AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        .setTitle("IPTV provider login")
+        .setMessage("Use the same Xtream Codes details as in TiviMate. They're stored only on this box.")
+        .setView(layout)
+        .setPositiveButton("Connect") { _, _ -> onSave(server.text.toString(), user.text.toString(), pass.text.toString()) }
+        .setNegativeButton("Cancel", null)
+        .show()
 }

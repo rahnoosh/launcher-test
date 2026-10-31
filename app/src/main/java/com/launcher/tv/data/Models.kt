@@ -17,12 +17,20 @@ data class MediaItem(
     val posterUrl: String? = null,
     /** Air date: for "next up" episodes when it aired, for upcoming ones when it will air. */
     val timeMillis: Long? = null,
+    /** Trakt / TMDB ids of the show or movie, used to find it in the IPTV catalogue and to scrobble. */
+    val traktId: Long? = null,
+    val tmdbId: Long? = null,
+    val year: Int? = null,
+    val season: Int? = null,
+    val episode: Int? = null,
 )
 
 @Serializable
 data class TeamInfo(
     val name: String,
     val abbr: String,
+    /** "New England Patriots" (ESPN displayName). */
+    val fullName: String? = null,
     /** Hex without '#', as ESPN sends it ("002244"). */
     val color: String? = null,
     val altColor: String? = null,
@@ -47,6 +55,9 @@ data class SportsEvent(
     /** Only for team sports (ESPN). */
     val home: TeamInfo? = null,
     val away: TeamInfo? = null,
+    /** Quarter / period / inning while live. */
+    val period: Int? = null,
+    val finished: Boolean = false,
 )
 
 /** Everything the home screen shows. Cached to disk so Home opens instantly. */
