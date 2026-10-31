@@ -27,7 +27,8 @@ data class OverlayCard(
     val onOk: (() -> Unit)? = null,
 ) {
     companion object {
-        fun from(a: LiveAlert, onOk: () -> Unit) = OverlayCard(a.kicker, a.title, a.detail, a.teams, a.event.league.take(3).uppercase(), onOk = onOk)
+        fun from(a: LiveAlert, hint: String = "OK  watch     BACK  dismiss", onOk: () -> Unit) =
+            OverlayCard(a.kicker, a.title, a.detail, a.teams, a.event.league.take(3).uppercase(), hint, onOk)
     }
 }
 

@@ -87,6 +87,12 @@
             </intent-filter>
         </service>
 
+        <!-- Game page: box score, scoring plays, stats; F1 weekend; UFC card. -->
+        <activity
+            android:name=".ui.GameActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+
         <!-- Screensaver preview from Quick settings. -->
         <activity
             android:name=".dream.ScreensaverActivity"

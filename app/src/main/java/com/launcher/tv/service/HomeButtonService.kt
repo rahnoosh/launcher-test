@@ -12,6 +12,7 @@ import com.launcher.tv.alerts.LiveAlertEngine
 import com.launcher.tv.alerts.OverlayCard
 import com.launcher.tv.player.Watch
 import com.launcher.tv.system.SleepTimer
+import com.launcher.tv.ui.GameActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CoroutineScope
@@ -48,7 +49,19 @@ class HomeButtonService : AccessibilityService() {
         running = true
         val o = AlertOverlay(this)
         overlay = o
-        scope.launch { LiveAlertEngine(this@HomeButtonService) { alert -> o.show(OverlayCard.from(alert) { watch(alert) }) }.run() }
+        scope.launch {
+            LiveAlertEngine(this@HomeButtonService) { alert ->
+                val card = if (alert.kicker == "FINAL") {
+                    // Game over: OK opens its page (box score + highlights) instead of a channel.
+                    OverlayCard.from(alert, hint = "OK  highlights & stats     BACK  dismiss") {
+                        startActivity(GameActivity.intent(this@HomeButtonService, alert.event).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                } else {
+                    OverlayCard.from(alert) { watch(alert) }
+                }
+                o.show(card)
+            }.run()
+        }
         scope.launch {
             while (isActive) {
                 checkSleepTimer()

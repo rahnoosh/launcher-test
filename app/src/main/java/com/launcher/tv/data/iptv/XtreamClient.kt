@@ -28,61 +28,29 @@ import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Xtream Codes API client (player_api.php). Catalogues are downloaded once a day, streamed
+ * Xtream Codes provider (player_api.php). Catalogues are downloaded once a day, streamed
  * straight into lean objects (big providers list tens of thousands of entries) and cached on disk.
  */
-class XtreamClient private constructor(context: Context) {
+class XtreamClient(context: Context, override val config: SourceConfig.Xtream) : IptvSource {
 
     data class Config(val server: String, val username: String, val password: String)
 
-    private val prefs = context.getSharedPreferences("iptv", Context.MODE_PRIVATE)
-    private val dir = File(context.filesDir, "iptv").apply { mkdirs() }
-
-    val config: Config?
-        get() {
-            val s = prefs.getString("server", null) ?: return null
-            val u = prefs.getString("username", null) ?: return null
-            val p = prefs.getString("password", null) ?: return null
-            return Config(s, u, p)
-        }
-
-    val isConfigured: Boolean get() = config != null
+    private val cfg = Config(config.server, config.username, config.password)
+    private val prefs = context.getSharedPreferences("iptv_${config.id}", Context.MODE_PRIVATE)
+    private val dir = File(context.filesDir, "iptv/${config.id}").apply { mkdirs() }
 
     var serverTimezone: String?
         get() = prefs.getString("timezone", null)
         private set(v) { prefs.edit().putString("timezone", v).apply() }
 
-    fun save(cfg: Config) {
-        prefs.edit().putString("server", cfg.server).putString("username", cfg.username).putString("password", cfg.password).apply()
-        clearCaches()
-    }
-
-    fun clear() {
-        prefs.edit().clear().apply()
-        clearCaches()
-    }
-
-    private fun clearCaches() {
-        channelCache.clear(); seriesCache.clear(); vodCache.clear(); categoryCache.clear(); episodeCache.clear()
-        dir.listFiles()?.forEach { it.delete() }
-    }
-
     // ---------------- account ----------------
 
-    suspend fun account(cfg: Config = config ?: error("IPTV not set up")): XtreamAccount {
-        val root = Http.getJson(api(cfg, null)).obj() ?: error("Unexpected response from server")
-        val user = root.obj("user_info") ?: error("Login failed: check username and password")
-        val auth = user.str("auth")
-        if (auth != null && auth != "1") error("Login failed: check username and password")
-        val tz = root.obj("server_info")?.str("timezone")
-        if (cfg == config) serverTimezone = tz
-        return XtreamAccount(
-            active = user.str("status").equals("Active", ignoreCase = true),
-            status = user.str("status") ?: "Unknown",
-            expiresMillis = user.str("exp_date")?.toLongOrNull()?.times(1000),
-            maxConnections = user.str("max_connections"),
-            serverTimezone = tz,
-        )
+    suspend fun account(): XtreamAccount = account(cfg).also { serverTimezone = it.serverTimezone }
+
+    override suspend fun status(): String {
+        val a = account()
+        val exp = a.expiresMillis?.let { " · expires " + DateTimeFormatter.ofPattern("MMM d, yyyy").format(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault())) }.orEmpty()
+        return "${a.status}$exp"
     }
 
     // ---------------- catalogues ----------------
@@ -91,7 +59,6 @@ class XtreamClient private constructor(context: Context) {
         val mutex = Mutex()
         @Volatile var items: List<T>? = null
         @Volatile var loadedAt = 0L
-        fun clear() { items = null; loadedAt = 0 }
     }
 
     private val channelCache = Cached("live", ListSerializer(XtreamChannel.serializer()), "get_live_streams")
@@ -99,15 +66,23 @@ class XtreamClient private constructor(context: Context) {
     private val seriesCache = Cached("series", ListSerializer(XtreamSeries.serializer()), "get_series")
     private val vodCache = Cached("vod", ListSerializer(XtreamVod.serializer()), "get_vod_streams")
     private val episodeCache = ConcurrentHashMap<String, List<XtreamEpisode>>()
+    @Volatile private var mapped: Pair<Long, List<IptvChannel>>? = null
 
-    suspend fun channels(): List<XtreamChannel> = load(channelCache)
-    suspend fun liveCategories(): Map<String, String> = load(categoryCache).associate { it.id to it.name }
+    override suspend fun channels(): List<IptvChannel> {
+        val raw = load(channelCache)
+        mapped?.takeIf { it.first == channelCache.loadedAt }?.let { return it.second }
+        val cats = runCatching { load(categoryCache) }.getOrDefault(emptyList()).associate { it.id to it.name }
+        val list = raw.map {
+            IptvChannel(config.id, it.streamId, it.name, cats[it.categoryId], it.epgChannelId?.ifBlank { null }, it.icon?.ifBlank { null }, it.hasArchive)
+        }
+        mapped = channelCache.loadedAt to list
+        return list
+    }
+
     suspend fun series(): List<XtreamSeries> = load(seriesCache)
     suspend fun movies(): List<XtreamVod> = load(vodCache)
 
-    /** Download catalogues in the background so the first "Play" is instant. */
-    suspend fun prefetch() {
-        if (!isConfigured) return
+    override suspend fun prefetch() {
         for (c in listOf(channelCache, categoryCache, seriesCache, vodCache)) {
             try { load(c) } catch (e: CancellationException) { throw e } catch (_: Exception) { }
         }
@@ -117,10 +92,8 @@ class XtreamClient private constructor(context: Context) {
     private suspend fun <T> load(c: Cached<T>): List<T> = c.mutex.withLock {
         val fresh = System.currentTimeMillis() - c.loadedAt < MAX_AGE
         c.items?.takeIf { fresh }?.let { return it }
-        val cfg = config ?: error("IPTV not set up")
         val file = File(dir, "${c.name}.json")
         withContext(Dispatchers.IO) {
-            // Disk cache first.
             if (file.exists() && System.currentTimeMillis() - file.lastModified() < MAX_AGE) {
                 runCatching { file.inputStream().buffered().use { XJson.decodeFromStream(c.serializer, it) } }
                     .getOrNull()?.let { items ->
@@ -142,47 +115,82 @@ class XtreamClient private constructor(context: Context) {
 
     suspend fun seriesEpisodes(seriesId: String): List<XtreamEpisode> {
         episodeCache[seriesId]?.let { return it }
-        val cfg = config ?: error("IPTV not set up")
         val root = Http.getJson(api(cfg, "get_series_info") + "&series_id=$seriesId").obj() ?: return emptyList()
         val episodes = parseEpisodes(root)
         episodeCache[seriesId] = episodes
         return episodes
     }
 
-    /** Upcoming programmes on a channel (titles come base64-encoded). */
-    suspend fun shortEpg(streamId: String, limit: Int = 6): List<EpgEntry> {
-        val cfg = config ?: return emptyList()
-        val root = Http.getJson(api(cfg, "get_short_epg") + "&stream_id=$streamId&limit=$limit").obj() ?: return emptyList()
+    override suspend fun guide(channel: IptvChannel): List<EpgEntry> {
+        val root = Http.getJson(api(cfg, "get_short_epg") + "&stream_id=${channel.id}&limit=6").obj() ?: return emptyList()
         return parseEpg(root)
     }
 
-    // ---------------- stream URLs ----------------
+    // ---------------- playback ----------------
 
-    fun liveUrl(streamId: String): String = config!!.let { "${it.server}/live/${enc(it.username)}/${enc(it.password)}/$streamId.ts" }
+    override fun liveUrl(channel: IptvChannel): String = "${cfg.server}/live/${enc(cfg.username)}/${enc(cfg.password)}/${channel.id}.ts"
 
-    fun movieUrl(v: XtreamVod): String = config!!.let { "${it.server}/movie/${enc(it.username)}/${enc(it.password)}/${v.streamId}.${v.extension ?: "mp4"}" }
+    fun movieUrl(v: XtreamVod): String = "${cfg.server}/movie/${enc(cfg.username)}/${enc(cfg.password)}/${v.streamId}.${v.extension ?: "mp4"}"
 
-    fun episodeUrl(e: XtreamEpisode): String = config!!.let { "${it.server}/series/${enc(it.username)}/${enc(it.password)}/${e.id}.${e.extension}" }
+    fun episodeUrl(e: XtreamEpisode): String = "${cfg.server}/series/${enc(cfg.username)}/${enc(cfg.password)}/${e.id}.${e.extension}"
 
-    /** Catch-up: play a channel's archive from [startMillis]. Times are in the server's time zone. */
-    fun timeshiftUrl(streamId: String, startMillis: Long, durationMinutes: Int): String = config!!.let {
+    /** Times are in the server's time zone. */
+    override fun catchupUrl(channel: IptvChannel, startMillis: Long, durationMinutes: Int): String? {
+        if (!channel.archive) return null
         val zone = runCatching { ZoneId.of(serverTimezone ?: "UTC") }.getOrDefault(ZoneId.of("UTC"))
         val start = DateTimeFormatter.ofPattern("yyyy-MM-dd:HH-mm").format(Instant.ofEpochMilli(startMillis).atZone(zone))
-        "${it.server}/timeshift/${enc(it.username)}/${enc(it.password)}/$durationMinutes/$start/$streamId.ts"
+        return "${cfg.server}/timeshift/${enc(cfg.username)}/${enc(cfg.password)}/$durationMinutes/$start/${channel.id}.ts"
     }
 
-    private fun api(cfg: Config, action: String?): String =
-        "${cfg.server}/player_api.php?username=${enc(cfg.username)}&password=${enc(cfg.password)}" +
-            (action?.let { "&action=$it" } ?: "")
+    override suspend fun findEpisode(title: String, year: Int?, tmdbId: Long?, season: Int, episode: Int): Playable? {
+        val all = series()
+        val candidates = withContext(Dispatchers.Default) {
+            CatalogMatcher.rank(all, title, year, tmdbId, { it.name }, { it.tmdbAny }, { it.yearAny })
+        }
+        for (s in candidates.take(4)) {
+            val ep = seriesEpisodes(s.seriesId).firstOrNull { it.season == season && it.episode == episode } ?: continue
+            return Playable(episodeUrl(ep), "%s S%02dE%02d".format(title, season, episode))
+        }
+        return null
+    }
+
+    override suspend fun findMovie(title: String, year: Int?, tmdbId: Long?): Playable? {
+        val all = movies()
+        val best = withContext(Dispatchers.Default) {
+            CatalogMatcher.rank(all, title, year, tmdbId, { it.name }, { it.tmdbAny }, { Names.yearOf(it.name) ?: it.year?.toIntOrNull() }).firstOrNull()
+        } ?: return null
+        return Playable(movieUrl(best), year?.let { "$title ($it)" } ?: title)
+    }
 
     companion object {
         private const val MAX_AGE = 24 * 3600_000L
 
-        @Volatile private var instance: XtreamClient? = null
-        fun get(context: Context): XtreamClient =
-            instance ?: synchronized(this) { instance ?: XtreamClient(context.applicationContext).also { instance = it } }
-
         private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
+
+        private fun api(cfg: Config, action: String?): String =
+            "${cfg.server}/player_api.php?username=${enc(cfg.username)}&password=${enc(cfg.password)}" +
+                (action?.let { "&action=$it" } ?: "")
+
+        /** Login check without saving anything. */
+        suspend fun account(cfg: Config): XtreamAccount {
+            val root = Http.getJson(api(cfg, null)).obj() ?: error("Unexpected response from server")
+            val user = root.obj("user_info") ?: error("Login failed: check username and password")
+            val auth = user.str("auth")
+            if (auth != null && auth != "1") error("Login failed: check username and password")
+            return XtreamAccount(
+                active = user.str("status").equals("Active", ignoreCase = true),
+                status = user.str("status") ?: "Unknown",
+                expiresMillis = user.str("exp_date")?.toLongOrNull()?.times(1000),
+                maxConnections = user.str("max_connections"),
+                serverTimezone = root.obj("server_info")?.str("timezone"),
+            )
+        }
+
+        /** "get.php?username=..&password=.." links are Xtream logins in disguise. */
+        fun isXtreamM3uLink(url: String): Boolean {
+            val u = url.trim().let { if (it.contains("://")) it else "http://$it" }.toHttpUrlOrNull() ?: return false
+            return u.encodedPath.endsWith("get.php") && !u.queryParameter("username").isNullOrBlank() && !u.queryParameter("password").isNullOrBlank()
+        }
 
         /**
          * Accepts "host:port", "http://host:port/", or a full M3U link
@@ -201,7 +209,6 @@ class XtreamClient private constructor(context: Context) {
 
         internal fun parseEpisodes(root: JsonObject): List<XtreamEpisode> {
             val episodes = root["episodes"]
-            // Usually {"1": [...], "2": [...]}, occasionally a flat array.
             val lists = when (episodes) {
                 is JsonObject -> episodes.values.mapNotNull { it.arr() }
                 is kotlinx.serialization.json.JsonArray -> listOf(episodes)

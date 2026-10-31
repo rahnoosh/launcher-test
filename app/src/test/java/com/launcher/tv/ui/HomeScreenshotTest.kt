@@ -22,6 +22,10 @@ import com.launcher.tv.alerts.LiveAlert
 import com.launcher.tv.alerts.OverlayCard
 import com.launcher.tv.data.iptv.ChannelCandidate
 import com.launcher.tv.data.iptv.XtreamChannel
+import com.launcher.tv.data.sports.GameDetail
+import com.launcher.tv.data.sports.GameDetails
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import org.junit.Rule
 import org.junit.Test
 
@@ -77,6 +81,32 @@ class HomeScreenshotTest {
     @Test fun screensaver() {
         val data = sampleState().data
         paparazzi.snapshot { HomeBaseTheme { ScreensaverLayout(data, startNow = System.currentTimeMillis()) } }
+    }
+
+    @Test fun finishedGameHero() = snap(HomeTab.FOR_YOU, "g-espn-lad")
+
+    @Test fun gamePageFootball() {
+        val json = javaClass.classLoader!!.getResource("nfl_summary.json")?.readText()
+        val detail = json?.let { GameDetails.parseSummary(Json.parseToJsonElement(it).jsonObject, "NFL") }
+        val ev = sampleState().data.myTeams.first { it.id == "espn-ne" }.copy(live = true, status = "14-10 Q3 4:12")
+        paparazzi.snapshot { HomeBaseTheme { GamePageLayout(ev, detail, loading = false, actions = GameActions(iptv = true)) } }
+    }
+
+    @Test fun gamePageF1() {
+        val now = System.currentTimeMillis()
+        val h = 3_600_000L
+        val detail = GameDetail.F1(
+            sessions = listOf(
+                GameDetail.Session("Practice 1", now - 30 * h), GameDetail.Session("Sprint qualifying", now - 26 * h),
+                GameDetail.Session("Sprint", now - 6 * h), GameDetail.Session("Qualifying", now + 1 * h), GameDetail.Session("Race", now + 22 * h),
+            ),
+            results = emptyList(),
+            standings = listOf("Lando Norris" to "390", "Oscar Piastri" to "366", "Max Verstappen" to "341", "George Russell" to "263", "Charles Leclerc" to "214")
+                .mapIndexed { i, (n, p) -> GameDetail.Standing("${i + 1}", n, "", "$p pts") },
+            circuit = "Autódromo José Carlos Pace",
+        )
+        val ev = sampleState().data.f1.first()
+        paparazzi.snapshot { HomeBaseTheme { GamePageLayout(ev, detail, loading = false, actions = GameActions(iptv = true)) } }
     }
 
     /** The live alert card drawn over whatever is playing. */
@@ -150,6 +180,11 @@ class HomeScreenshotTest {
                 fights = listOf(SportsEvent("ufc-329", "UFC 329: Main Card", "UFC", now + 14 * day, broadcast = "Paramount+")),
                 f1 = listOf(SportsEvent("f1-2026-21", "São Paulo Grand Prix", "F1", now + 8 * day, status = "Qualifying Sat 3:00 PM",
                     venue = "Interlagos · Brazil")),
+                results = listOf(
+                    SportsEvent("espn-lad", "Yankees @ Dodgers", "MLB", now - 20 * hour, finished = true, broadcast = "FOX",
+                        home = TeamInfo("Dodgers", "LAD", color = "005A9C", altColor = "EF3E42", score = "5"),
+                        away = TeamInfo("Yankees", "NYY", color = "003087", altColor = "E4002C", score = "3")),
+                ),
                 fetchedAt = now,
             ),
         )

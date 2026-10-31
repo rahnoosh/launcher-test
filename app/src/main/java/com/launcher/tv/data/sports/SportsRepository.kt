@@ -34,7 +34,10 @@ object SportsRepository {
 
     // ---------------- My teams ----------------
 
-    suspend fun myTeams(): List<SportsEvent>? = runCatchingNull {
+    suspend fun myTeams(): List<SportsEvent>? = myTeamsAndResults()?.first
+
+    /** Upcoming/live games of your teams, plus their games that finished in the last 48 hours. */
+    suspend fun myTeamsAndResults(): Pair<List<SportsEvent>, List<SportsEvent>>? = runCatchingNull {
         coroutineScope {
             SportsConfig.myTeams.map { team ->
                 async {
@@ -47,15 +50,20 @@ object SportsRepository {
                         async { runCatching { Http.getJson(url).obj()?.arr("events") }.getOrNull() }
                     }.awaitAll()
                         .flatMap { it.orEmpty() }
-                        .mapNotNull { parseEspnEvent(it, team.league) }
+                        .mapNotNull { parseEspnEvent(it, team.league, includeFinished = true) }
                         .distinctBy { it.id }
-                        .filter { it.isUpcomingOrLive() }
-                        .sortedBy { it.startMillis }
-                        .take(SportsConfig.gamesPerTeam)
                 }
-            }.awaitAll().flatten().sortedBy { it.startMillis }
+            }.awaitAll().let { perTeam ->
+                val upcoming = perTeam.flatMap { games ->
+                    games.filter { !it.finished && it.isUpcomingOrLive() }.sortedBy { it.startMillis }.take(SportsConfig.gamesPerTeam)
+                }.sortedBy { it.startMillis }
+                val results = perTeam.flatten().filter { it.isRecentResult() }.distinctBy { it.id }.sortedByDescending { it.startMillis }
+                upcoming to results
+            }
         }
     }
+
+    private fun SportsEvent.isRecentResult(): Boolean = finished && startMillis > System.currentTimeMillis() - 48 * 3600_000L
 
     // ---------------- NFL this week ----------------
 
@@ -69,13 +77,20 @@ object SportsRepository {
 
     // ---------------- Fights: UFC + boxing ----------------
 
-    suspend fun fights(): List<SportsEvent>? = coroutineScope {
+    suspend fun fights(): List<SportsEvent>? = fightsAndResults()?.first
+
+    /** Upcoming fights, plus numbered UFC events from the last 48 hours. */
+    suspend fun fightsAndResults(): Pair<List<SportsEvent>, List<SportsEvent>>? = coroutineScope {
         val ufc = async { runCatchingNull { ufcBigEvents() } }
         val boxing = async { runCatchingNull { boxing() } }
         val u = ufc.await()
         val b = boxing.await()
         if (u == null && b == null) null
-        else (u.orEmpty() + b.orEmpty()).sortedBy { it.startMillis }
+        else {
+            val all = u.orEmpty() + b.orEmpty()
+            all.filter { !it.finished && it.isUpcomingOrLive() }.sortedBy { it.startMillis } to
+                all.filter { it.isRecentResult() }.sortedByDescending { it.startMillis }
+        }
     }
 
     private suspend fun ufcBigEvents(): List<SportsEvent> {
@@ -84,7 +99,7 @@ object SportsRepository {
         val range = "${today.minusDays(1).format(fmt)}-${today.plusDays(120).format(fmt)}"
         val root = Http.getJson("$ESPN/mma/ufc/scoreboard?dates=$range").obj()
         val events = root?.arr("events").orEmpty()
-            .mapNotNull { parseEspnEvent(it, "UFC", useEventName = true) }
+            .mapNotNull { parseEspnEvent(it, "UFC", useEventName = true, includeFinished = true) }
         // Fallback: the league calendar lists upcoming cards even when "events" only holds the next one.
         val calendar = root?.arr("leagues")?.firstOrNull()?.obj()?.arr("calendar").orEmpty()
             .mapNotNull { entry ->
@@ -94,7 +109,7 @@ object SportsRepository {
                 SportsEvent(id = "ufc-cal-$label", title = label, league = "UFC", startMillis = start)
             }
         return (events + calendar)
-            .filter { SportsConfig.ufcBigEventPattern.containsMatchIn(it.title) && it.isUpcomingOrLive() }
+            .filter { SportsConfig.ufcBigEventPattern.containsMatchIn(it.title) && (it.isUpcomingOrLive() || it.isRecentResult()) }
             .distinctBy { SportsConfig.ufcBigEventPattern.find(it.title)?.value ?: it.id }
     }
 
@@ -117,8 +132,11 @@ object SportsRepository {
 
     // ---------------- Formula 1 ----------------
 
-    suspend fun f1(): List<SportsEvent>? = runCatchingNull {
-        if (!SportsConfig.showF1) return@runCatchingNull emptyList()
+    suspend fun f1(): List<SportsEvent>? = f1AndResults()?.first
+
+    /** Next race weekends, plus the race from the last 48 hours. */
+    suspend fun f1AndResults(): Pair<List<SportsEvent>, List<SportsEvent>>? = runCatchingNull {
+        if (!SportsConfig.showF1) return@runCatchingNull emptyList<SportsEvent>() to emptyList<SportsEvent>()
         val races = Http.getJson("https://api.jolpi.ca/ergast/f1/current/races.json").obj()
             ?.obj("MRData")?.obj("RaceTable")?.arr("Races").orEmpty()
         races.mapNotNull { r ->
@@ -135,7 +153,11 @@ object SportsRepository {
                 status = quali?.let { "Qualifying ${formatShort(it)}" },
                 venue = listOfNotNull(circuit?.str("circuitName"), loc?.str("country")).joinToString(" · "),
             )
-        }.filter { it.isUpcomingOrLive() }.sortedBy { it.startMillis }.take(3)
+        }.let { all ->
+            val now = System.currentTimeMillis()
+            all.filter { it.isUpcomingOrLive() }.sortedBy { it.startMillis }.take(3) to
+                all.filter { it.startMillis in (now - 48 * 3600_000L)..(now - 3 * 3600_000L) }.map { it.copy(finished = true) }
+        }
     }
 
     // ---------------- ESPN parsing ----------------

@@ -1,7 +1,5 @@
 package com.launcher.tv.data.iptv
 
-import com.launcher.tv.data.MediaItem
-import com.launcher.tv.data.MediaKind
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -49,13 +47,12 @@ class XtreamParsingTest {
             XtreamSeries("3", "The Bear Grylls Show"),
             XtreamSeries("4", "Bear (1988)"),
         )
-        val item = MediaItem("x", MediaKind.EPISODE, "The Bear", "", year = 2022, season = 4, episode = 3)
-        val ranked = CatalogMatcher.rank(series, item, { it.name }, { it.tmdbAny }, { it.yearAny })
+        val ranked = CatalogMatcher.rank(series, "The Bear", 2022, null, { it.name }, { it.tmdbAny }, { it.yearAny })
         assertEquals("2", ranked.first().seriesId)
         assertTrue("3" !in ranked.map { it.seriesId })
 
         val withTmdb = series + XtreamSeries("9", "Bear, The", tmdb = "136315")
-        val ranked2 = CatalogMatcher.rank(withTmdb, item.copy(tmdbId = 136315), { it.name }, { it.tmdbAny }, { it.yearAny })
+        val ranked2 = CatalogMatcher.rank(withTmdb, "The Bear", 2022, 136315, { it.name }, { it.tmdbAny }, { it.yearAny })
         assertEquals("9", ranked2.first().seriesId)
     }
 
@@ -63,5 +60,7 @@ class XtreamParsingTest {
         val c = XtreamClient.normalize("http://line.example.com:8080/get.php?username=joe&password=secret&type=m3u_plus", "", "")
         assertEquals(XtreamClient.Config("http://line.example.com:8080", "joe", "secret"), c)
         assertEquals("http://host.tv", XtreamClient.normalize("host.tv/", "a", "b").server)
+        assertTrue(XtreamClient.isXtreamM3uLink("http://line.example.com:8080/get.php?username=joe&password=secret&type=m3u_plus"))
+        assertTrue(!XtreamClient.isXtreamM3uLink("http://cdn.example.com/lists/mine.m3u"))
     }
 }

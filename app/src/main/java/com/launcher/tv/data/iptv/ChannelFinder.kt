@@ -12,7 +12,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
 data class ChannelCandidate(
-    val channel: XtreamChannel,
+    val channel: IptvChannel,
     val score: Int,
     val reason: String,
     /** What the TV guide says is on around kick-off, if we checked. */
@@ -26,23 +26,22 @@ data class ChannelCandidate(
  *  3. channels of the network ESPN lists (CBS, ESPN, local affiliates...),
  *  4. the TV guide on the best candidates, when the game is close.
  */
-class ChannelFinder(context: Context, private val client: XtreamClient) {
+class ChannelFinder(context: Context, private val library: IptvLibrary) {
     private val prefs = context.getSharedPreferences("channel_choices", Context.MODE_PRIVATE)
 
     suspend fun find(event: SportsEvent): List<ChannelCandidate> {
-        val channels = client.channels()
-        val categories = runCatching { client.liveCategories() }.getOrDefault(emptyMap())
+        val channels = library.channels()
         val learned = prefs.all.mapNotNull { (k, v) -> (v as? String)?.let { k to it } }.toMap()
-        val scored = withContext(Dispatchers.Default) { score(event, channels, categories, learned) }
+        val scored = withContext(Dispatchers.Default) { score(event, channels, learned) }
         val now = System.currentTimeMillis()
         val soon = event.live || event.startMillis - now < 6 * 3600_000L
         return if (soon) checkGuide(event, scored).sortedByDescending { it.score } else scored
     }
 
     /** Remember the user's pick so the same team/network goes straight to it next time. */
-    fun remember(event: SportsEvent, channel: XtreamChannel) {
+    fun remember(event: SportsEvent, channel: IptvChannel) {
         prefs.edit().apply {
-            learnKeys(event).forEach { putString(it, channel.streamId) }
+            learnKeys(event).forEach { putString(it, channel.key) }
         }.apply()
     }
 
@@ -52,7 +51,7 @@ class ChannelFinder(context: Context, private val client: XtreamClient) {
         val checked = top.map { c ->
             async {
                 gate.withPermit {
-                    val epg = try { client.shortEpg(c.channel.streamId, 6) } catch (e: CancellationException) { throw e } catch (_: Exception) { emptyList() }
+                    val epg = try { library.guide(c.channel) } catch (e: CancellationException) { throw e } catch (_: Exception) { emptyList() }
                     applyGuide(event, c, epg)
                 }
             }
@@ -124,8 +123,7 @@ class ChannelFinder(context: Context, private val client: XtreamClient) {
         /** Pure scoring, no network: unit-tested. */
         fun score(
             event: SportsEvent,
-            channels: List<XtreamChannel>,
-            categories: Map<String, String>,
+            channels: List<IptvChannel>,
             learned: Map<String, String>,
         ): List<ChannelCandidate> {
             val nets = networks(event)
@@ -137,11 +135,11 @@ class ChannelFinder(context: Context, private val client: XtreamClient) {
             return channels.mapNotNull { ch ->
                 val t = Names.tokens(ch.name)
                 if (t.isEmpty()) return@mapNotNull null
-                val cat = Names.tokens(categories[ch.categoryId].orEmpty())
+                val cat = Names.tokens(ch.group.orEmpty())
                 var score = 0
                 val why = mutableListOf<String>()
 
-                if (ch.streamId in learnedIds) { score += 90; why += "your pick" }
+                if (ch.key in learnedIds) { score += 90; why += "your pick" }
 
                 val teamHits = teams.count { Names.findRun(t, it) != null }
                     .coerceAtMost(2)

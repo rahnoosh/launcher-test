@@ -13,6 +13,8 @@ import com.launcher.tv.data.MediaItem
 import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.iptv.ChannelCandidate
 import com.launcher.tv.data.iptv.ChannelFinder
+import com.launcher.tv.data.iptv.IptvLibrary
+import com.launcher.tv.data.iptv.SourceConfig
 import com.launcher.tv.data.iptv.XtreamClient
 import com.launcher.tv.data.trakt.TraktClient
 import com.launcher.tv.alerts.AlertSettings
@@ -37,6 +39,9 @@ sealed interface TraktState {
     data object SignedIn : TraktState
 }
 
+/** A provider in Settings. */
+data class SourceRow(val id: String, val name: String, val kind: String, val status: String? = null)
+
 /** Channels found for one game. */
 data class ChannelLookup(
     val loading: Boolean = false,
@@ -52,9 +57,9 @@ data class HomeUiState(
     val refreshing: Boolean = false,
     val trakt: TraktState = TraktState.SignedOut,
     val message: String? = null,
-    /** IPTV (Xtream) login saved. */
+    /** At least one IPTV provider (Xtream or M3U) added. */
     val iptv: Boolean = false,
-    val iptvStatus: String? = null,
+    val sources: List<SourceRow> = emptyList(),
     val channels: Map<String, ChannelLookup> = emptyMap(),
     /** Game whose channel picker is open. */
     val picker: SportsEvent? = null,
@@ -72,13 +77,13 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = HomeRepository(app, traktClient)
     val apps = AppsRepository(app)
     private val history = WatchHistory.get(app)
-    private val iptv = XtreamClient.get(app)
-    private val finder = ChannelFinder(app, iptv)
+    private val library = IptvLibrary.get(app)
+    private val finder = ChannelFinder(app, library)
 
     private val _state = MutableStateFlow(
         HomeUiState(
             trakt = currentTraktState(),
-            iptv = iptv.isConfigured,
+            iptv = library.isConfigured,
             alerts = AlertSettings.enabled(app),
             scoringAlerts = AlertSettings.scoring(app),
         )
@@ -101,26 +106,19 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             history.entries.collect { list -> _state.update { it.copy(history = list) } }
         }
         // Download the provider's catalogues in the background so Play is instant later.
-        viewModelScope.launch { iptv.prefetch() }
+        viewModelScope.launch { library.prefetch() }
     }
 
     // ---------------- IPTV ----------------
 
-    fun saveXtream(server: String, username: String, password: String) {
+    fun addXtream(server: String, username: String, password: String) {
         viewModelScope.launch {
             _state.update { it.copy(busy = "Checking your provider login…") }
             try {
                 val cfg = XtreamClient.normalize(server, username, password)
-                val account = iptv.account(cfg)
-                iptv.save(cfg)
-                iptv.account() // stores the server time zone for catch-up
-                val expires = account.expiresMillis?.let {
-                    " · expires " + DateTimeFormatter.ofPattern("MMM d, yyyy").format(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()))
-                }.orEmpty()
-                val status = "${account.status}$expires"
-                _state.update { it.copy(iptv = true, iptvStatus = status, channels = emptyMap(), message = "Provider connected: $status. Loading channels…") }
-                iptv.prefetch()
-                _state.update { it.copy(message = "Channels and catalogue ready") }
+                val account = XtreamClient.account(cfg)
+                library.add(SourceConfig.Xtream(IptvLibrary.newId(), IptvLibrary.hostOf(cfg.server), cfg.server, cfg.username, cfg.password))
+                afterSourcesChanged("Provider connected (${account.status}). Loading channels…")
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 _state.update { it.copy(message = "Couldn't connect: ${e.message}") }
@@ -130,29 +128,63 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun removeXtream() {
-        iptv.clear()
-        _state.update { it.copy(iptv = false, iptvStatus = null, channels = emptyMap()) }
+    fun addM3u(url: String, epgUrl: String) {
+        // A get.php link is an Xtream login: the API gives catch-up, series info and a faster guide.
+        if (XtreamClient.isXtreamM3uLink(url)) {
+            _state.update { it.copy(message = "That M3U link is an Xtream login, so it's added as Xtream") }
+            addXtream(url, "", "")
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(busy = "Loading playlist…") }
+            val trimmed = url.trim().let { if (it.contains("://")) it else "http://$it" }
+            val config = SourceConfig.M3u(IptvLibrary.newId(), IptvLibrary.hostOf(trimmed), trimmed, epgUrl.trim().ifBlank { null })
+            try {
+                val status = IptvLibrary.create(getApplication(), config).status() // downloads and checks the playlist
+                library.add(config)
+                afterSourcesChanged("Playlist added: $status")
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                _state.update { it.copy(message = "Couldn't load that playlist: ${e.message}") }
+            } finally {
+                _state.update { it.copy(busy = null) }
+            }
+        }
+    }
+
+    fun removeSource(id: String) {
+        library.remove(id)
+        _state.update { s -> s.copy(iptv = library.isConfigured, sources = sourceRows(s.sources.associate { it.id to it.status }), channels = emptyMap()) }
+    }
+
+    private suspend fun afterSourcesChanged(message: String) {
+        _state.update { it.copy(iptv = true, sources = sourceRows(emptyMap()), channels = emptyMap(), message = message) }
+        library.prefetch()
+        loadIptvStatus()
+    }
+
+    private fun sourceRows(statuses: Map<String, String?>): List<SourceRow> = library.configs().map {
+        SourceRow(it.id, it.name, if (it is SourceConfig.M3u) "M3U" else "Xtream", statuses[it.id])
     }
 
     fun loadIptvStatus() {
-        if (!iptv.isConfigured) return
-        viewModelScope.launch {
-            val status = runCatching { iptv.account() }.fold(
-                onSuccess = { a ->
-                    a.status + (a.expiresMillis?.let {
-                        " · expires " + DateTimeFormatter.ofPattern("MMM d, yyyy").format(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()))
-                    } ?: "")
-                },
-                onFailure = { "Couldn't reach provider: ${it.message}" },
-            )
-            _state.update { it.copy(iptvStatus = status) }
+        _state.update { it.copy(sources = sourceRows(it.sources.associate { r -> r.id to r.status })) }
+        for (source in library.sources) {
+            viewModelScope.launch {
+                val status = try {
+                    source.status()
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    "Couldn't reach provider: ${e.message}"
+                }
+                _state.update { s -> s.copy(sources = s.sources.map { if (it.id == source.config.id) it.copy(status = status) else it }) }
+            }
         }
     }
 
     /** Finds channels for the selected game so the hero can show "on US: CBS Boston". */
     fun resolveChannels(event: SportsEvent) {
-        if (!iptv.isConfigured) return
+        if (!library.isConfigured) return
         val existing = _state.value.channels[event.id]
         if (existing != null && (existing.loading || System.currentTimeMillis() - existing.at < 10 * 60_000L)) return
         _state.update { it.copy(channels = it.channels + (event.id to ChannelLookup(loading = true, at = System.currentTimeMillis()))) }
@@ -182,6 +214,14 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                     is Watch.Result.Playing -> s.copy(busy = null)
                 }
             }
+        }
+    }
+
+    fun highlights(event: SportsEvent) {
+        viewModelScope.launch {
+            _state.update { it.copy(busy = "Finding highlights…") }
+            val msg = com.launcher.tv.player.Highlights.play(getApplication(), event)
+            _state.update { it.copy(busy = null, message = msg) }
         }
     }
 

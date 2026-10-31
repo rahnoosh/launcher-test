@@ -151,10 +151,18 @@ private fun TileFace(tile: Tile) {
                             Brush.linearGradient(0f to a, 0.5f to a, 0.5f to h, 1f to h)
                         )
                     )
-                    Column(Modifier.align(Alignment.Center).padding(top = if (e.live) 8.dp else 0.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(away.abbr, color = Color.White, fontSize = (w * 0.19f).sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-                        Text("at", color = Color.White.copy(alpha = 0.7f), fontSize = (w * 0.1f).sp, fontWeight = FontWeight.Bold)
-                        Text(home.abbr, color = Color.White, fontSize = (w * 0.19f).sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                    if (e.finished) {
+                        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
+                        Column(Modifier.align(Alignment.Center).padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("${away.abbr} ${away.score ?: ""}", color = Color.White, fontSize = (w * 0.17f).sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                            Text("${home.abbr} ${home.score ?: ""}", color = Color.White, fontSize = (w * 0.17f).sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                        }
+                    } else {
+                        Column(Modifier.align(Alignment.Center).padding(top = if (e.live) 8.dp else 0.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(away.abbr, color = Color.White, fontSize = (w * 0.19f).sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                            Text("at", color = Color.White.copy(alpha = 0.7f), fontSize = (w * 0.1f).sp, fontWeight = FontWeight.Bold)
+                            Text(home.abbr, color = Color.White, fontSize = (w * 0.19f).sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                        }
                     }
                 } else {
                     val c = leagueColor(e.league)
@@ -176,6 +184,7 @@ private fun TileFace(tile: Tile) {
                     }
                 }
                 if (e.live) Badge("LIVE", LiveRed, Color.White, Modifier.align(Alignment.TopStart))
+                if (e.finished) Badge("FINAL", Color.Black.copy(alpha = 0.7f), Color.White, Modifier.align(Alignment.TopStart))
             }
             is Tile.App -> {
                 val banner = tile.app.banner

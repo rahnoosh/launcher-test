@@ -98,13 +98,16 @@ class HomeCallbacks(
     val openPicker: (SportsEvent) -> Unit = {},
     val closePicker: () -> Unit = {},
     val playMedia: (MediaItem) -> Unit = {},
-    val saveXtream: (String, String, String) -> Unit = { _, _, _ -> },
-    val removeXtream: () -> Unit = {},
+    val addXtream: (String, String, String) -> Unit = { _, _, _ -> },
+    val addM3u: (String, String) -> Unit = { _, _ -> },
+    val removeSource: (String) -> Unit = {},
     val loadIptvStatus: () -> Unit = {},
     val setAlerts: (Boolean) -> Unit = {},
     val setScoringAlerts: (Boolean) -> Unit = {},
     val openAndroidSettings: () -> Unit = {},
     val openSystemSettings: (QuickAction) -> Unit = {},
+    val openGame: (SportsEvent) -> Unit = {},
+    val highlights: (SportsEvent) -> Unit = {},
     val cycleSleepTimer: () -> Unit = {},
     val previewScreensaver: () -> Unit = {},
     val refreshSystemState: () -> Unit = {},
@@ -136,8 +139,9 @@ fun HomeScreen(vm: HomeViewModel) {
             openPicker = vm::openPicker,
             closePicker = { vm.closePicker() },
             playMedia = vm::playMedia,
-            saveXtream = vm::saveXtream,
-            removeXtream = vm::removeXtream,
+            addXtream = vm::addXtream,
+            addM3u = vm::addM3u,
+            removeSource = vm::removeSource,
             loadIptvStatus = vm::loadIptvStatus,
             setAlerts = vm::setAlerts,
             setScoringAlerts = vm::setScoringAlerts,
@@ -146,6 +150,8 @@ fun HomeScreen(vm: HomeViewModel) {
             cycleSleepTimer = vm::cycleSleepTimer,
             previewScreensaver = { context.startActivity(Intent(context, ScreensaverActivity::class.java)) },
             refreshSystemState = vm::refreshSystemState,
+            openGame = { context.startActivity(GameActivity.intent(context, it)) },
+            highlights = vm::highlights,
         )
     }
     HomeLayout(state, callbacks)
@@ -196,6 +202,8 @@ fun HomeLayout(
             watchGame = { e, startOver -> callbacks.watchGame(e, null, startOver) },
             pickChannel = callbacks.openPicker,
             playMedia = callbacks.playMedia,
+            openGame = callbacks.openGame,
+            highlights = callbacks.highlights,
             iptv = state.iptv,
         )
     }
@@ -331,7 +339,8 @@ fun HomeLayout(
             SettingsDialog(
                 state = state,
                 callbacks = callbacks,
-                onXtream = { showXtreamForm(context) { s, u, p -> callbacks.saveXtream(s, u, p) } },
+                onAddXtream = { showXtreamForm(context) { s, u, p -> callbacks.addXtream(s, u, p) } },
+                onAddM3u = { showM3uForm(context) { url, epg -> callbacks.addM3u(url, epg) } },
                 onDismiss = { showSettings = false },
             )
         }
@@ -473,7 +482,7 @@ fun HomeBaseTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onXtream: () -> Unit, onDismiss: () -> Unit) {
+private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXtream: () -> Unit, onAddM3u: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
             Modifier.width(540.dp).background(Color(0xFF1C222B), RoundedCornerShape(16.dp)).padding(26.dp),
@@ -481,11 +490,20 @@ private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onXtrea
             Text("Settings", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
 
             SettingsSection(
-                "IPTV provider (Xtream Codes)",
-                if (state.iptv) state.iptvStatus ?: "Connected" else "Not set up: Watch and Play open TiviMate instead",
+                "IPTV providers",
+                if (state.sources.isEmpty()) "None yet: Watch and Play open TiviMate instead" else "Channels from all of them are searched together",
             ) {
-                PillButton(if (state.iptv) "Change login" else "Set up", onXtream, primary = true)
-                if (state.iptv) PillButton("Remove", callbacks.removeXtream)
+                PillButton("Add Xtream", onAddXtream, primary = state.sources.isEmpty())
+                PillButton("Add M3U playlist", onAddM3u)
+            }
+            state.sources.forEach { src ->
+                Row(Modifier.padding(top = 8.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("${src.name}  ·  ${src.kind}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(src.status ?: "Checking…", color = Dim, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    PillButton("Remove", { callbacks.removeSource(src.id) })
+                }
             }
             SettingsSection(
                 "Live alerts",
@@ -516,7 +534,7 @@ private fun SettingsSection(title: String, subtitle: String, buttons: @Composabl
 }
 
 @Composable
-private fun ChannelPicker(event: SportsEvent, lookup: ChannelLookup?, onPick: (ChannelCandidate) -> Unit, onDismiss: () -> Unit) {
+internal fun ChannelPicker(event: SportsEvent, lookup: ChannelLookup?, onPick: (ChannelCandidate) -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
             Modifier.width(580.dp).heightIn(max = 470.dp).background(Color(0xFF1C222B), RoundedCornerShape(16.dp)).padding(22.dp),
@@ -531,7 +549,7 @@ private fun ChannelPicker(event: SportsEvent, lookup: ChannelLookup?, onPick: (C
                 lookup.candidates.isEmpty() -> Text(lookup.error ?: "No matching channels found.", color = Dim, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp))
             }
             LazyColumn(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(lookup?.candidates.orEmpty(), key = { it.channel.streamId }) { c ->
+                items(lookup?.candidates.orEmpty(), key = { it.channel.key }) { c ->
                     Surface(
                         onClick = { onPick(c) },
                         modifier = Modifier.fillMaxWidth(),
@@ -557,6 +575,30 @@ private fun ChannelPicker(event: SportsEvent, lookup: ChannelLookup?, onPick: (C
             }
         }
     }
+}
+
+/** M3U playlist URL plus an optional XMLTV guide URL. */
+private fun showM3uForm(context: android.content.Context, onSave: (String, String) -> Unit) {
+    val pad = (20 * context.resources.displayMetrics.density).toInt()
+    fun field(hint: String) = EditText(context).apply {
+        this.hint = hint
+        isSingleLine = true
+        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+    }
+    val url = field("Playlist URL (http://…/playlist.m3u)")
+    val epg = field("TV guide URL, optional (XMLTV, .xml or .xml.gz)")
+    val layout = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(pad, pad / 2, pad, 0)
+        addView(url); addView(epg)
+    }
+    AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        .setTitle("Add M3U playlist")
+        .setMessage("If the playlist names its own TV guide (url-tvg), leave the guide empty.")
+        .setView(layout)
+        .setPositiveButton("Add") { _, _ -> onSave(url.text.toString(), epg.text.toString()) }
+        .setNegativeButton("Cancel", null)
+        .show()
 }
 
 /** Native form: the TV keyboard works far better with real EditTexts than with Compose text fields. */

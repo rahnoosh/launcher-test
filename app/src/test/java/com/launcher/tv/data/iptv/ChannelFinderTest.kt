@@ -11,17 +11,17 @@ class ChannelFinderTest {
     private val bills = TeamInfo("Bills", "BUF", fullName = "Buffalo Bills")
     private val game = SportsEvent("espn-1", "Patriots @ Bills", "NFL", startMillis = 1_000_000_000L, broadcast = "CBS", home = bills, away = pats)
 
-    private fun ch(id: String, name: String, cat: String = "1") = XtreamChannel(streamId = id, name = name, categoryId = cat)
     private val cats = mapOf("1" to "USA | ENTERTAINMENT", "2" to "NFL GAME PASS", "3" to "UK SPORTS")
+    private fun ch(id: String, name: String, cat: String = "1") = IptvChannel(sourceId = "s", id = id, name = name, group = cats[cat])
 
     @Test fun eventChannelBeatsNetwork() {
         val list = ChannelFinder.score(game, listOf(
             ch("10", "US: CBS HD"),
             ch("11", "NFL 05: New England Patriots vs Buffalo Bills", "2"),
             ch("12", "US: Comedy Central"),
-        ), cats, emptyMap())
-        assertEquals("11", list.first().channel.streamId)
-        assertEquals(listOf("11", "10"), list.map { it.channel.streamId })
+        ), emptyMap())
+        assertEquals("11", list.first().channel.id)
+        assertEquals(listOf("11", "10"), list.map { it.channel.id })
     }
 
     @Test fun networkMatchIgnoresLookalikes() {
@@ -31,40 +31,40 @@ class ChannelFinderTest {
             ch("2", "US: ESPN 2 HD"),
             ch("3", "US: ESPNEWS"),
             ch("4", "UK: ESPN", "3"),
-        ), cats, emptyMap()).map { it.channel.streamId }
+        ), emptyMap()).map { it.channel.id }
         assertEquals("1", ids.first())
         assertTrue("ESPN 2 must not match ESPN", "2" !in ids)
         assertTrue("ESPNEWS is a different channel", "3" !in ids)
     }
 
     @Test fun espn2MatchesSpacedName() {
-        val ids = ChannelFinder.score(game.copy(broadcast = "ESPN2"), listOf(ch("2", "US: ESPN 2 HD"), ch("1", "US: ESPN HD")), cats, emptyMap())
-            .map { it.channel.streamId }
+        val ids = ChannelFinder.score(game.copy(broadcast = "ESPN2"), listOf(ch("2", "US: ESPN 2 HD"), ch("1", "US: ESPN HD")), emptyMap())
+            .map { it.channel.id }
         assertEquals(listOf("2"), ids)
     }
 
     @Test fun foxDoesNotMatchFoxNews() {
-        val ids = ChannelFinder.score(game.copy(broadcast = "FOX"), listOf(ch("1", "US: FOX NEWS"), ch("2", "US: FOX HD")), cats, emptyMap())
-            .map { it.channel.streamId }
+        val ids = ChannelFinder.score(game.copy(broadcast = "FOX"), listOf(ch("1", "US: FOX NEWS"), ch("2", "US: FOX HD")), emptyMap())
+            .map { it.channel.id }
         assertEquals(listOf("2"), ids)
     }
 
     @Test fun aliasesMapEspnNames() {
         val sec = game.copy(broadcast = "SECN")
-        val ids = ChannelFinder.score(sec, listOf(ch("1", "US: SEC Network FHD"), ch("2", "US: CBS")), cats, emptyMap()).map { it.channel.streamId }
+        val ids = ChannelFinder.score(sec, listOf(ch("1", "US: SEC Network FHD"), ch("2", "US: CBS")), emptyMap()).map { it.channel.id }
         assertEquals(listOf("1"), ids)
     }
 
     @Test fun rememberedPickWins() {
-        val learned = mapOf("team:NE" to "20")
-        val list = ChannelFinder.score(game, listOf(ch("10", "US: CBS HD"), ch("20", "US: CBS (WBZ) Boston")), cats, learned)
-        assertEquals("20", list.first().channel.streamId)
+        val learned = mapOf("team:NE" to "s:20")
+        val list = ChannelFinder.score(game, listOf(ch("10", "US: CBS HD"), ch("20", "US: CBS (WBZ) Boston")), learned)
+        assertEquals("20", list.first().channel.id)
     }
 
     @Test fun ufcNumberedEventMatchesPpvChannel() {
         val ufc = SportsEvent("ufc", "UFC 329: Smith vs. Jones", "UFC", 0L, broadcast = "Paramount+")
-        val ids = ChannelFinder.score(ufc, listOf(ch("1", "PPV 01: UFC 329"), ch("2", "UFC Fight Pass"), ch("3", "Paramount+ Live")), cats, emptyMap())
-            .map { it.channel.streamId }
+        val ids = ChannelFinder.score(ufc, listOf(ch("1", "PPV 01: UFC 329"), ch("2", "UFC Fight Pass"), ch("3", "Paramount+ Live")), emptyMap())
+            .map { it.channel.id }
         assertEquals("1", ids.first())
     }
 

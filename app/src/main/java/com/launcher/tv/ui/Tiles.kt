@@ -42,7 +42,12 @@ sealed interface Tile {
     data class Game(val event: SportsEvent) : Tile {
         override val key get() = "g-${event.id}"
         override val title get() = event.title
-        override val subtitle get() = if (event.live) "Live · ${event.status ?: ""}".trimEnd(' ', '·') else friendlyTime(event.startMillis)
+        override val subtitle get() = when {
+            event.live -> "Live · ${event.status ?: ""}".trimEnd(' ', '·')
+            event.finished && event.home != null -> "Final · ${event.away?.score ?: 0}–${event.home.score ?: 0}"
+            event.finished -> "Finished · highlights"
+            else -> friendlyTime(event.startMillis)
+        }
     }
 
     data class App(val app: AppEntry) : Tile {
@@ -97,6 +102,7 @@ fun buildTiles(tab: HomeTab, s: HomeUiState): List<Tile> {
         HomeTab.FOR_YOU -> buildList<Tile> {
             history.take(3).forEach { add(Tile.Resume(it)) }
             live.forEach { add(Tile.Game(it)) }
+            d.results.take(3).forEach { add(Tile.Game(it)) }
             if (signedIn) d.upNext.take(6).forEach { add(Tile.Media(it, Tile.Role.UP_NEXT)) }
             addAll(traktPrompt)
             d.myTeams.filter { !it.live }.take(3).forEach { add(Tile.Game(it)) }
@@ -115,7 +121,7 @@ fun buildTiles(tab: HomeTab, s: HomeUiState): List<Tile> {
             }
             addAll(traktPrompt)
         }
-        HomeTab.SPORTS -> (live + allSports.filter { !it.live }.sortedBy { it.startMillis }).map<SportsEvent, Tile> { Tile.Game(it) }
+        HomeTab.SPORTS -> (live + d.results + allSports.filter { !it.live }.sortedBy { it.startMillis }).map<SportsEvent, Tile> { Tile.Game(it) }
         HomeTab.APPS -> s.apps.map<AppEntry, Tile> { Tile.App(it) }
     }.distinctBy { it.key }
 

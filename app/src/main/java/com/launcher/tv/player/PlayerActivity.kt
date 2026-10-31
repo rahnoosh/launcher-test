@@ -282,9 +282,10 @@ class PlayerActivity : ComponentActivity() {
         private const val EXTRA_IMAGE = "homebase.image"
         private const val EXTRA_POSTER = "homebase.poster"
 
-        fun liveIntent(context: Context, url: String, title: String, eventId: String?): Intent =
+        fun liveIntent(context: Context, url: String, title: String, eventId: String?, headers: Map<String, String> = emptyMap()): Intent =
             Intent(context, PlayerActivity::class.java).setData(Uri.parse(url))
                 .putExtra("title", title).putExtra(EXTRA_LIVE, true).putExtra(EXTRA_EVENT, eventId)
+                .apply { if (headers.isNotEmpty()) putExtra("headers", headers.flatMap { listOf(it.key, it.value) }.toTypedArray()) }
 
         fun episodeIntent(
             context: Context, url: String, title: String, showTitle: String, showTraktId: Long?,

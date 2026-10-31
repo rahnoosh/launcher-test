@@ -43,6 +43,8 @@ class HomeActions(
     val connectTrakt: () -> Unit,
     val watchGame: (SportsEvent, Boolean) -> Unit = { _, _ -> },
     val pickChannel: (SportsEvent) -> Unit = {},
+    val openGame: (SportsEvent) -> Unit = {},
+    val highlights: (SportsEvent) -> Unit = {},
     val playMedia: (com.launcher.tv.data.MediaItem) -> Unit = {},
     /** IPTV login saved: Watch/Play go straight to the stream. */
     val iptv: Boolean = false,
@@ -52,7 +54,7 @@ class HomeActions(
 fun Tile.primaryAction(a: HomeActions): () -> Unit = when (this) {
     is Tile.Resume -> { { a.play(entry) } }
     is Tile.Media -> if (role == Tile.Role.UPCOMING) a.openTiviMate else { { a.playMedia(item) } }
-    is Tile.Game -> { { a.watchGame(event, false) } }
+    is Tile.Game -> if (event.finished) { { a.highlights(event) } } else { { a.watchGame(event, false) } }
     is Tile.App -> { { a.launchApp(app.packageName) } }
     Tile.AllApps -> a.showApps
     Tile.ConnectTrakt -> a.connectTrakt
@@ -252,22 +254,15 @@ fun HeroContent(tile: Tile, actions: HomeActions, modifier: Modifier = Modifier,
 @Composable
 private fun GameHero(e: SportsEvent, actions: HomeActions, channels: ChannelLookup?) {
     val home = e.home
-    val away = e.away
-    Eyebrow(listOfNotNull(if (e.live) "Live now" else null, e.league, e.broadcast).joinToString(" · "), live = e.live)
-    if (home != null && away != null) {
-        Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            TeamBlock(away, "Away")
-            if (e.live) {
-                Score(away.score ?: "0", bright = true)
-                Text("–", color = Faint, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                Score(home.score ?: "0", bright = false)
-            } else {
-                Text("@", color = Faint, fontSize = 30.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp))
-            }
-            TeamBlock(home, "Home")
+    Eyebrow(gameEyebrow(e), live = e.live)
+    if (home != null && e.away != null) Scoreboard(e) else Title(e.title)
+    if (e.finished) {
+        Meta(listOfNotNull("Final", e.broadcast, e.venue))
+        Buttons {
+            PillButton("Highlights", { actions.highlights(e) }, primary = true, icon = R.drawable.ic_play)
+            PillButton("Game details", { actions.openGame(e) })
         }
-    } else {
-        Title(e.title)
+        return
     }
     val best = channels?.candidates?.firstOrNull()
     val channelText = when {
@@ -283,11 +278,35 @@ private fun GameHero(e: SportsEvent, actions: HomeActions, channels: ChannelLook
     Buttons {
         if (actions.iptv) {
             PillButton(if (e.live) "Watch live" else "Watch", { actions.watchGame(e, false) }, primary = true, icon = R.drawable.ic_play)
-            if (e.live && best?.channel?.hasArchive == true) PillButton("Start over", { actions.watchGame(e, true) })
+            if (e.live && best?.channel?.archive == true) PillButton("Start over", { actions.watchGame(e, true) })
             PillButton("Channels", { actions.pickChannel(e) })
         } else {
             PillButton("Watch in TiviMate", actions.openTiviMate, primary = true, icon = R.drawable.ic_play)
         }
+        PillButton("Game details", { actions.openGame(e) })
+    }
+}
+
+internal fun gameEyebrow(e: SportsEvent): String =
+    listOfNotNull(if (e.live) "Live now" else if (e.finished) "Final" else null, e.league, e.broadcast).joinToString(" · ")
+
+/** Crests, names and (once started) the score; the leading team is brighter. */
+@Composable
+internal fun Scoreboard(e: SportsEvent, awayLabel: String = "Away", homeLabel: String = "Home") {
+    val home = e.home ?: return
+    val away = e.away ?: return
+    val a = away.score?.toIntOrNull()
+    val h = home.score?.toIntOrNull()
+    Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        TeamBlock(away, awayLabel)
+        if (e.live || e.finished) {
+            Score(away.score ?: "0", bright = a == null || h == null || a >= h)
+            Text("–", color = Faint, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            Score(home.score ?: "0", bright = a == null || h == null || h >= a)
+        } else {
+            Text("@", color = Faint, fontSize = 30.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp))
+        }
+        TeamBlock(home, homeLabel)
     }
 }
 
@@ -308,7 +327,7 @@ private fun Score(value: String, bright: Boolean) {
 }
 
 @Composable
-private fun Eyebrow(text: String, live: Boolean = false) {
+internal fun Eyebrow(text: String, live: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (live) {
             Box(Modifier.size(7.dp).background(LiveRed, CircleShape))
@@ -319,7 +338,7 @@ private fun Eyebrow(text: String, live: Boolean = false) {
 }
 
 @Composable
-private fun Title(text: String) {
+internal fun Title(text: String) {
     val size = when {
         text.length <= 14 -> 50.sp
         text.length <= 22 -> 40.sp
@@ -332,7 +351,7 @@ private fun Title(text: String) {
 }
 
 @Composable
-private fun Meta(parts: List<String>) {
+internal fun Meta(parts: List<String>) {
     if (parts.isEmpty()) return
     Text(
         parts.joinToString("  •  "), color = Dim, fontSize = 13.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -341,7 +360,7 @@ private fun Meta(parts: List<String>) {
 }
 
 @Composable
-private fun Buttons(content: @Composable () -> Unit) {
+internal fun Buttons(content: @Composable () -> Unit) {
     Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
         content()
     }

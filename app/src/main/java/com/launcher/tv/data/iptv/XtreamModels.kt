@@ -63,8 +63,6 @@ data class XtreamVod(
 
 data class XtreamEpisode(val id: String, val season: Int, val episode: Int, val title: String, val extension: String)
 
-data class EpgEntry(val title: String, val description: String, val startMillis: Long, val endMillis: Long)
-
 data class XtreamAccount(
     val active: Boolean,
     val status: String,

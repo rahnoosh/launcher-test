@@ -92,12 +92,21 @@ cleaned up before searching Trakt
 ([`TitleParser.kt`](app/src/main/java/com/launcher/tv/player/TitleParser.kt), with tests). Titles that
 can't be parsed are still saved to the history but not scrobbled.
 
-## 7. Connect your IPTV provider (Xtream Codes)
+## 7. Connect your IPTV providers (Xtream Codes or M3U)
 
-Open **Settings** (the gear at the top right) and choose **IPTV provider, Set up**. Enter the same Xtream Codes
-server, username and password you use in TiviMate. You can also paste your M3U link
-(`http://host:port/get.php?username=…&password=…`) into the server box, and HomeBase fills in the rest. The
-login is stored only on the box.
+Open **Quick settings** (the gear) and choose **HomeBase**. You can add as many providers as you like; their
+channels are searched together.
+
+- **Add Xtream:** the same server, username and password you use in TiviMate.
+- **Add M3U playlist:** the playlist URL, plus an optional XMLTV guide URL. If the playlist names its own guide
+  (`url-tvg`), you can leave the guide empty. Gzipped guides work too.
+  If the M3U link is actually an Xtream login (`…/get.php?username=…&password=…`), HomeBase adds it as Xtream
+  instead, which gives you catch-up, series info and a faster guide.
+
+Logins are stored only on the box. Playlists and catalogues refresh daily, M3U guides every 12 hours.
+For M3U providers, *Start over* uses the playlist's `catchup` / `catchup-source` settings, or the Xtream
+timeshift path when the stream URLs look like Xtream. Movies and episodes in the playlist are matched by title
+(`The Bear S04 E03`, `Dune: Part Two (2024)`).
 
 After that:
 
@@ -113,7 +122,21 @@ After that:
   provider's catalogue and plays it. Playback is scrobbled to Trakt with exact IDs.
 - Channel lists and catalogues download once a day in the background.
 
-## 8. Live alerts
+## 8. Game pages, results and highlights
+
+- **Game details** on any game opens its page:
+  - **Team games:** scoreboard with records, line score, leaders, the latest scoring plays and team stats.
+    It refreshes every minute while the game is live.
+  - **F1:** the race weekend schedule in your time zone, the race result and the drivers' standings.
+  - **UFC:** the fight card, main event first, with records and winners.
+- **Results:** for 48 hours after a game ends, its tile shows the final score. The same goes for numbered UFC
+  events and the last F1 race.
+- **Highlights:** HomeBase plays ESPN's own highlight clip in HomeBase Player when ESPN has one. Otherwise it
+  opens a YouTube search ("New England Patriots vs Buffalo Bills highlights", "F1 São Paulo Grand Prix 2026
+  highlights").
+- The *Final* alert card now opens the game page.
+
+## 8b. Live alerts
 
 While the HomeBase Home button service is on (step 4), a card appears in the top-right corner over any app,
 TiviMate included:

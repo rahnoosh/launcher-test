@@ -27,19 +27,26 @@ class HomeRepository(context: Context, val trakt: TraktClient) {
         val upNext = async { if (signedIn) safe { trakt.upNext() } else emptyList() }
         val watchlist = async { if (signedIn) safe { trakt.watchlistMovies() } else emptyList() }
         val upcoming = async { if (signedIn) safe { trakt.upcomingEpisodes() } else emptyList() }
-        val teams = async { SportsRepository.myTeams() }
+        val teams = async { SportsRepository.myTeamsAndResults() }
         val nfl = async { SportsRepository.nflThisWeek() }
-        val fights = async { SportsRepository.fights() }
-        val f1 = async { SportsRepository.f1() }
+        val fights = async { SportsRepository.fightsAndResults() }
+        val f1 = async { SportsRepository.f1AndResults() }
 
         val data = HomeData(
             upNext = upNext.await() ?: previous.upNext,
             watchlist = watchlist.await() ?: previous.watchlist,
             upcomingEpisodes = upcoming.await() ?: previous.upcomingEpisodes,
-            myTeams = teams.await() ?: previous.myTeams,
+            myTeams = teams.await()?.first ?: previous.myTeams,
             nfl = nfl.await() ?: previous.nfl,
-            fights = fights.await() ?: previous.fights,
-            f1 = f1.await() ?: previous.f1,
+            fights = fights.await()?.first ?: previous.fights,
+            f1 = f1.await()?.first ?: previous.f1,
+            results = run {
+                val t = teams.await()?.second
+                val f = fights.await()?.second
+                val r = f1.await()?.second
+                if (t == null && f == null && r == null) previous.results
+                else (t.orEmpty() + f.orEmpty() + r.orEmpty()).sortedByDescending { it.startMillis }
+            },
             fetchedAt = System.currentTimeMillis(),
         )
         withContext(Dispatchers.IO) {

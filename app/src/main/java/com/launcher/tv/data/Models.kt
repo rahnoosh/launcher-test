@@ -70,5 +70,7 @@ data class HomeData(
     val nfl: List<SportsEvent> = emptyList(),
     val fights: List<SportsEvent> = emptyList(),
     val f1: List<SportsEvent> = emptyList(),
+    /** Finished in the last 48 hours: your teams, numbered UFC events, the last F1 race. */
+    val results: List<SportsEvent> = emptyList(),
     val fetchedAt: Long = 0,
 )

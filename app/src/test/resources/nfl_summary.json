@@ -1,0 +1,29 @@
+{
+      "header": {"competitions": [{
+        "status": {"type": {"state": "in", "detail": "3rd Quarter - 4:12", "shortDetail": "Q3 4:12"}},
+        "competitors": [
+          {"homeAway": "home", "score": "10", "team": {"abbreviation": "BUF", "displayName": "Buffalo Bills"},
+           "record": [{"type": "total", "summary": "6-2"}], "linescores": [{"displayValue": "7"}, {"displayValue": "3"}, {"displayValue": "0"}]},
+          {"homeAway": "away", "score": "14", "team": {"abbreviation": "NE", "displayName": "New England Patriots"},
+           "record": [{"type": "total", "summary": "5-3"}], "linescores": [{"displayValue": "0"}, {"displayValue": "7"}, {"displayValue": "7"}]}
+        ]}]},
+      "leaders": [
+        {"team": {"abbreviation": "NE"}, "leaders": [
+          {"name": "passingYards", "displayName": "Passing Yards", "leaders": [{"displayValue": "18/24, 212 YDS, 2 TD", "athlete": {"displayName": "Drake Maye", "shortName": "D. Maye"}}]},
+          {"name": "rushingYards", "displayName": "Rushing Yards", "leaders": [{"displayValue": "14 CAR, 66 YDS", "athlete": {"displayName": "Rhamondre Stevenson"}}]}]},
+        {"team": {"abbreviation": "BUF"}, "leaders": [
+          {"name": "passingYards", "displayName": "Passing Yards", "leaders": [{"displayValue": "15/22, 180 YDS, 1 TD", "athlete": {"displayName": "Josh Allen", "shortName": "J. Allen"}}]}]}
+      ],
+      "scoringPlays": [
+        {"type": {"text": "Passing Touchdown"}, "text": "James Cook 3 Yd Run (Bass Kick)", "awayScore": 0, "homeScore": 7, "period": {"number": 1}, "clock": {"displayValue": "8:21"}, "team": {"abbreviation": "BUF"}},
+        {"type": {"text": "Field Goal Good"}, "text": "Tyler Bass 41 Yd Field Goal", "awayScore": 0, "homeScore": 10, "period": {"number": 2}, "clock": {"displayValue": "11:02"}, "team": {"abbreviation": "BUF"}},
+        {"type": {"text": "Passing Touchdown"}, "text": "Drake Maye Pass to Hunter Henry for 12 Yds", "awayScore": 7, "homeScore": 10, "period": {"number": 2}, "clock": {"displayValue": "0:31"}, "team": {"abbreviation": "NE"}},
+        {"type": {"text": "Rushing Touchdown"}, "text": "Rhamondre Stevenson 5 Yd Run", "awayScore": 14, "homeScore": 10, "period": {"number": 3}, "clock": {"displayValue": "6:40"}, "team": {"abbreviation": "NE"}}
+      ],
+      "boxscore": {"teams": [
+        {"team": {"abbreviation": "NE"}, "statistics": [{"name": "firstDowns", "label": "1st Downs", "displayValue": "15"}, {"name": "totalYards", "label": "Total Yards", "displayValue": "301"}, {"name": "turnovers", "label": "Turnovers", "displayValue": "0"}]},
+        {"team": {"abbreviation": "BUF"}, "statistics": [{"name": "firstDowns", "label": "1st Downs", "displayValue": "12"}, {"name": "totalYards", "label": "Total Yards", "displayValue": "244"}, {"name": "turnovers", "label": "Turnovers", "displayValue": "2"}]}
+      ]},
+      "gameInfo": {"venue": {"fullName": "Highmark Stadium"}},
+      "videos": [{"headline": "Maye finds Henry for the score", "thumbnail": "http://img/1.jpg", "links": {"source": {"href": "https://media.video-cdn.espn.com/clip.mp4", "HD": {"href": "https://media.video-cdn.espn.com/clip_HD.mp4"}}}}]
+    }

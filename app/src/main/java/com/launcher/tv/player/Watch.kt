@@ -6,12 +6,11 @@ import com.launcher.tv.data.AppsRepository
 import com.launcher.tv.data.MediaItem
 import com.launcher.tv.data.MediaKind
 import com.launcher.tv.data.SportsEvent
-import com.launcher.tv.data.iptv.CatalogMatcher
 import com.launcher.tv.data.iptv.ChannelCandidate
 import com.launcher.tv.data.iptv.ChannelFinder
-import com.launcher.tv.data.iptv.XtreamClient
+import com.launcher.tv.data.iptv.IptvLibrary
 
-/** One place that turns "watch this" into playback: IPTV first, TiviMate as the fallback. */
+/** One place that turns "watch this" into playback: your IPTV providers first, TiviMate as the fallback. */
 object Watch {
     sealed interface Result {
         data class Playing(val what: String) : Result
@@ -31,10 +30,10 @@ object Watch {
         interactive: Boolean = true,
         known: List<ChannelCandidate>? = null,
     ): Result {
-        val client = XtreamClient.get(context)
-        if (!client.isConfigured) return tivimate(context, null)
+        val library = IptvLibrary.get(context)
+        if (!library.isConfigured) return tivimate(context, null)
         val candidates = choice?.let { listOf(it) } ?: known?.takeIf { it.isNotEmpty() } ?: try {
-            ChannelFinder(context, client).find(event)
+            ChannelFinder(context, library).find(event)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             return tivimate(context, "Couldn't load your channels (${e.message})")
@@ -44,37 +43,37 @@ object Watch {
 
         val clearWinner = best.score >= 90 || candidates.getOrNull(1)?.let { best.score - it.score >= 15 } ?: (best.score >= 45)
         if (choice == null && interactive && !clearWinner) return Result.Choose(candidates)
-        if (choice != null) ChannelFinder(context, client).remember(event, choice.channel)
+        if (choice != null) ChannelFinder(context, library).remember(event, choice.channel)
 
         val ch = best.channel
         val now = System.currentTimeMillis()
-        val url = if (startOver && ch.hasArchive && event.startMillis < now) {
+        val url = (if (startOver && event.startMillis < now) {
             val from = event.startMillis - 5 * 60_000L
-            client.timeshiftUrl(ch.streamId, from, ((now - from) / 60_000L + 240).toInt())
-        } else {
-            client.liveUrl(ch.streamId)
-        }
-        context.startActivity(PlayerActivity.liveIntent(context, url, "${event.title} · ${ch.name}", event.id).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            library.catchupUrl(ch, from, ((now - from) / 60_000L + 240).toInt())
+        } else null) ?: library.liveUrl(ch) ?: return tivimate(context, "Couldn't open ${ch.name}")
+        context.startActivity(
+            PlayerActivity.liveIntent(context, url, "${event.title} · ${ch.name}", event.id, library.headers(ch)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
         return Result.Playing(ch.name)
     }
 
-    /** Next-up episode or watchlist movie from the provider's catalogue. */
+    /** Next-up episode or watchlist movie from your providers' catalogues. */
     suspend fun media(context: Context, item: MediaItem): Result {
-        val client = XtreamClient.get(context)
-        if (!client.isConfigured) return tivimate(context, null)
-        val matcher = CatalogMatcher(client)
+        val library = IptvLibrary.get(context)
+        if (!library.isConfigured) return tivimate(context, null)
         val found = try {
-            if (item.kind == MediaKind.MOVIE) matcher.movie(item) else matcher.episode(item)
+            library.find(item)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            return tivimate(context, "Couldn't search your provider (${e.message})")
-        } ?: return tivimate(context, "${item.title} isn't in your provider's catalogue")
+            return tivimate(context, "Couldn't search your providers (${e.message})")
+        } ?: return tivimate(context, "${item.title} isn't in your providers' catalogues")
 
         val intent = if (item.kind == MediaKind.MOVIE) {
             PlayerActivity.movieIntent(context, found.url, found.title, item.traktId, item.imageUrl, item.posterUrl)
         } else {
             PlayerActivity.episodeIntent(context, found.url, found.title, item.title, item.traktId, item.season ?: 0, item.episode ?: 0, item.imageUrl, item.posterUrl)
         }
+        if (found.headers.isNotEmpty()) intent.putExtra("headers", found.headers.flatMap { listOf(it.key, it.value) }.toTypedArray())
         context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         return Result.Playing(found.title)
     }
