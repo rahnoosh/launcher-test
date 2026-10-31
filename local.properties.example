@@ -1,0 +1,13 @@
+# Copy to local.properties (git-ignored) and fill in.
+# sdk.dir is written by Android Studio automatically.
+
+# https://trakt.tv/oauth/applications -> New application
+#   Redirect URI: urn:ietf:wg:oauth:2.0:oob
+TRAKT_CLIENT_ID=
+TRAKT_CLIENT_SECRET=
+
+# Optional, for posters/backdrops: https://www.themoviedb.org/settings/api (API Key, v3)
+TMDB_API_KEY=
+
+# Optional: TheSportsDB key for boxing. "123" is the free public key.
+SPORTSDB_API_KEY=123

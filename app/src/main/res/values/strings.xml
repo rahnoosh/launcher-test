@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">HomeBase</string>
+    <string name="home_service_label">HomeBase Home button</string>
+    <string name="home_service_description">Opens HomeBase when you press the Home button on the remote, in place of the stock Google TV home screen. It only watches for the Home key and for the stock launcher opening.</string>
+</resources>
