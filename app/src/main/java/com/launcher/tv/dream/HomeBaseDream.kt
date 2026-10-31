@@ -44,7 +44,7 @@ class HomeBaseDream : DreamService(), LifecycleOwner, SavedStateRegistryOwner {
             setViewTreeSavedStateRegistryOwner(this@HomeBaseDream)
             setContent {
                 val d by data.state.collectAsState()
-                HomeBaseTheme { ScreensaverLayout(d) }
+                HomeBaseTheme { ScreensaverLayout(com.launcher.tv.data.Spoilers.apply(this@HomeBaseDream, d)) }
             }
         }
         window?.decorView?.let {

@@ -73,7 +73,10 @@ class XtreamClient(context: Context, override val config: SourceConfig.Xtream) :
         mapped?.takeIf { it.first == channelCache.loadedAt }?.let { return it.second }
         val cats = runCatching { load(categoryCache) }.getOrDefault(emptyList()).associate { it.id to it.name }
         val list = raw.map {
-            IptvChannel(config.id, it.streamId, it.name, cats[it.categoryId], it.epgChannelId?.ifBlank { null }, it.icon?.ifBlank { null }, it.hasArchive)
+            IptvChannel(
+                config.id, it.streamId, it.name, cats[it.categoryId], it.epgChannelId?.ifBlank { null }, it.icon?.ifBlank { null },
+                it.hasArchive, number = it.num?.ifBlank { null },
+            )
         }
         mapped = channelCache.loadedAt to list
         return list

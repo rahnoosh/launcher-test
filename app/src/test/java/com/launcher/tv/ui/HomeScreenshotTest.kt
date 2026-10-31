@@ -26,6 +26,10 @@ import com.launcher.tv.data.sports.GameDetail
 import com.launcher.tv.data.sports.GameDetails
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import com.launcher.tv.data.iptv.CheckRow
+import com.launcher.tv.data.iptv.ProbeResult
 import org.junit.Rule
 import org.junit.Test
 
@@ -107,6 +111,36 @@ class HomeScreenshotTest {
         )
         val ev = sampleState().data.f1.first()
         paparazzi.snapshot { HomeBaseTheme { GamePageLayout(ev, detail, loading = false, actions = GameActions(iptv = true)) } }
+    }
+
+    @Test fun spoilerMode() {
+        paparazzi.snapshot {
+            HomeBaseTheme { HomeLayout(sampleState().copy(spoilers = true), HomeCallbacks(), initialTab = HomeTab.FOR_YOU, initialSelectedKey = "g-espn-lad") }
+        }
+    }
+
+    @Test fun bestStream() {
+        val ev = sampleState().data.myTeams.first { it.id == "espn-ne" }
+        fun row(provider: String, id: String, name: String, r: ProbeResult?, rating: Int, archive: Boolean = false, guide: Boolean = false) =
+            CheckRow(ChannelCandidate(IptvChannel(provider, id, name, archive = archive), 80, if (guide) "network, in TV guide" else "network", if (guide) "NFL" else null), provider, r, rating)
+        val state = StreamCheckState(
+            ev,
+            rows = listOf(
+                row("Provider A", "1", "US: CBS (WBZ) Boston FHD", ProbeResult(true, 640, 8_900, 1080), 92, archive = true, guide = true),
+                row("Provider B", "2", "NFL 05: Patriots vs Bills", ProbeResult(true, 1_400, 5_200, 720), 71),
+                row("Provider A", "3", "US: CBS HD", ProbeResult(true, 2_900, 3_100, null), 58),
+                row("Provider C", "4", "USA CBS East", ProbeResult(false, error = "HTTP 403"), 0),
+            ),
+            running = false,
+        )
+        paparazzi.snapshot {
+            HomeBaseTheme {
+                androidx.compose.foundation.layout.Box(
+                    androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF0B0E14)),
+                    contentAlignment = androidx.compose.ui.Alignment.Center,
+                ) { StreamCheckContent(state, {}, {}) }
+            }
+        }
     }
 
     /** The live alert card drawn over whatever is playing. */

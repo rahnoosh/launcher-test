@@ -68,6 +68,11 @@ data class HomeUiState(
     val alerts: Boolean = true,
     val scoringAlerts: Boolean = true,
     val sleepMinutes: Int = 0,
+    /** "Best stream" dialog for an event. */
+    val streamCheck: StreamCheckState? = null,
+    /** Spoiler mode: hide scores until "Show score". */
+    val spoilers: Boolean = false,
+    val revealed: Set<String> = emptySet(),
     /** The HomeBase accessibility service is on (Home button, alerts, sleep timer). */
     val serviceRunning: Boolean = false,
 )
@@ -86,6 +91,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             iptv = library.isConfigured,
             alerts = AlertSettings.enabled(app),
             scoringAlerts = AlertSettings.scoring(app),
+            spoilers = com.launcher.tv.data.Spoilers.enabled(app),
+            revealed = com.launcher.tv.data.Spoilers.revealed(app),
         )
     )
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
@@ -241,6 +248,55 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---------------- alerts ----------------
+
+    private var checkJob: Job? = null
+
+    /** Tries each provider's stream for the event and ranks them. */
+    fun compareProviders(event: SportsEvent) {
+        if (!library.isConfigured) {
+            _state.update { it.copy(message = "Add an IPTV provider first (Quick settings → HomeBase)") }
+            return
+        }
+        checkJob?.cancel()
+        _state.update { it.copy(streamCheck = StreamCheckState(event)) }
+        checkJob = viewModelScope.launch {
+            try {
+                com.launcher.tv.data.iptv.ProviderCheck(getApplication()).run(event, _state.value.channels[event.id]?.candidates) { rows, running ->
+                    _state.update { s -> if (s.streamCheck?.event?.id == event.id) s.copy(streamCheck = s.streamCheck.copy(rows = rows, running = running)) else s }
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                _state.update { s -> s.copy(streamCheck = s.streamCheck?.copy(running = false, error = "Couldn't check: ${e.message}")) }
+            }
+        }
+    }
+
+    fun closeStreamCheck() {
+        checkJob?.cancel()
+        _state.update { it.copy(streamCheck = null) }
+    }
+
+    fun watchFromCheck(row: com.launcher.tv.data.iptv.CheckRow) {
+        val event = _state.value.streamCheck?.event ?: return
+        closeStreamCheck()
+        watchGame(event, row.candidate)
+    }
+
+    fun tiviMateFromCheck(row: com.launcher.tv.data.iptv.CheckRow) {
+        val event = _state.value.streamCheck?.event
+        closeStreamCheck()
+        com.launcher.tv.player.TiviMateHelper.open(getApplication(), event, row.candidate.channel, row.provider)
+    }
+
+    fun setSpoilers(on: Boolean) {
+        com.launcher.tv.data.Spoilers.setEnabled(getApplication(), on)
+        _state.update { it.copy(spoilers = on, message = if (on) "Spoiler mode on: scores are hidden until you choose Show score" else "Spoiler mode off") }
+    }
+
+    fun revealScore(event: SportsEvent) {
+        com.launcher.tv.data.Spoilers.reveal(getApplication(), event.id)
+        _state.update { it.copy(revealed = it.revealed + event.id) }
+    }
 
     fun setAlerts(on: Boolean) {
         AlertSettings.setEnabled(getApplication(), on)

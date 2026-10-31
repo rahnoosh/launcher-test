@@ -9,6 +9,7 @@ import com.launcher.tv.MainActivity
 import com.launcher.tv.alerts.AlertOverlay
 import com.launcher.tv.alerts.LiveAlert
 import com.launcher.tv.alerts.LiveAlertEngine
+import com.launcher.tv.alerts.OverlayBus
 import com.launcher.tv.alerts.OverlayCard
 import com.launcher.tv.player.Watch
 import com.launcher.tv.system.SleepTimer
@@ -68,6 +69,7 @@ class HomeButtonService : AccessibilityService() {
                 delay(15_000)
             }
         }
+        scope.launch { OverlayBus.requests.collect { o.show(it.card, it.durationMs) } }
     }
 
     private fun checkSleepTimer() {
@@ -98,7 +100,8 @@ class HomeButtonService : AccessibilityService() {
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val o = overlay
-        if (o != null && (o.isShowing || swallowNextUp)) {
+        // Cards without an OK action (e.g. "pick this channel in TiviMate") never take keys.
+        if (o != null && ((o.isShowing && o.current?.onOk != null) || swallowNextUp)) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_BUTTON_A -> {
                     if (event.action == KeyEvent.ACTION_DOWN) {

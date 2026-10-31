@@ -73,6 +73,8 @@ import com.launcher.tv.data.history.HistoryEntry
 import com.launcher.tv.data.MediaItem
 import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.iptv.ChannelCandidate
+import com.launcher.tv.data.iptv.CheckRow
+import com.launcher.tv.data.Spoilers
 import android.content.Intent
 import android.provider.Settings
 import com.launcher.tv.player.PlayerActivity
@@ -111,6 +113,12 @@ class HomeCallbacks(
     val cycleSleepTimer: () -> Unit = {},
     val previewScreensaver: () -> Unit = {},
     val refreshSystemState: () -> Unit = {},
+    val setSpoilers: (Boolean) -> Unit = {},
+    val revealScore: (SportsEvent) -> Unit = {},
+    val compareProviders: (SportsEvent) -> Unit = {},
+    val closeStreamCheck: () -> Unit = {},
+    val watchFromCheck: (CheckRow) -> Unit = {},
+    val tiviMateFromCheck: (CheckRow) -> Unit = {},
 )
 
 @Composable
@@ -152,6 +160,12 @@ fun HomeScreen(vm: HomeViewModel) {
             refreshSystemState = vm::refreshSystemState,
             openGame = { context.startActivity(GameActivity.intent(context, it)) },
             highlights = vm::highlights,
+            setSpoilers = vm::setSpoilers,
+            revealScore = vm::revealScore,
+            compareProviders = vm::compareProviders,
+            closeStreamCheck = vm::closeStreamCheck,
+            watchFromCheck = vm::watchFromCheck,
+            tiviMateFromCheck = vm::tiviMateFromCheck,
         )
     }
     HomeLayout(state, callbacks)
@@ -174,8 +188,10 @@ fun HomeLayout(
     val scope = rememberCoroutineScope()
 
     var tab by rememberSaveable { mutableStateOf(initialTab) }
-    val tiles = remember(tab, state) { buildTiles(tab, state) }
-    val strip = remember(tab, state) { buildStrip(tab, state) }
+    // Spoiler mode: everything below sees games without their scores.
+    val shown = remember(state) { state.copy(data = Spoilers.apply(state.data, state.spoilers, state.revealed)) }
+    val tiles = remember(tab, shown) { buildTiles(tab, shown) }
+    val strip = remember(tab, shown) { buildStrip(tab, shown) }
 
     var selectedKey by remember { mutableStateOf(initialSelectedKey) }
     val selected = tiles.firstOrNull { it.key == selectedKey } ?: tiles.firstOrNull()
@@ -204,6 +220,8 @@ fun HomeLayout(
             playMedia = callbacks.playMedia,
             openGame = callbacks.openGame,
             highlights = callbacks.highlights,
+            revealScore = callbacks.revealScore,
+            compareProviders = callbacks.compareProviders,
             iptv = state.iptv,
         )
     }
@@ -324,10 +342,13 @@ fun HomeLayout(
                     QuickAction.HOMEBASE to if (state.iptv) "Provider connected" else "Provider, alerts",
                     QuickAction.WIFI to "Wi-Fi & Ethernet",
                     QuickAction.DISPLAY to "Picture & HDR",
+                    QuickAction.SPOILERS to if (state.spoilers) "On" else "Off",
                 ),
+                active = if (state.spoilers) setOf(QuickAction.SPOILERS) else emptySet(),
                 onAction = { a ->
                     when (a) {
                         QuickAction.SLEEP -> callbacks.cycleSleepTimer()
+                        QuickAction.SPOILERS -> callbacks.setSpoilers(!state.spoilers)
                         QuickAction.SCREENSAVER -> { showQuick = false; callbacks.previewScreensaver() }
                         QuickAction.HOMEBASE -> { showQuick = false; callbacks.loadIptvStatus(); showSettings = true }
                         else -> { showQuick = false; callbacks.openSystemSettings(a) }
@@ -343,6 +364,9 @@ fun HomeLayout(
                 onAddM3u = { showM3uForm(context) { url, epg -> callbacks.addM3u(url, epg) } },
                 onDismiss = { showSettings = false },
             )
+        }
+        state.streamCheck?.let { check ->
+            StreamCheckDialog(check, onWatch = callbacks.watchFromCheck, onTiviMate = callbacks.tiviMateFromCheck, onDismiss = callbacks.closeStreamCheck)
         }
         state.picker?.let { event ->
             ChannelPicker(
@@ -511,6 +535,9 @@ private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXt
             ) {
                 PillButton("Alerts: " + if (state.alerts) "On" else "Off", { callbacks.setAlerts(!state.alerts) })
                 PillButton("Scoring plays: " + if (state.scoringAlerts) "On" else "Off", { callbacks.setScoringAlerts(!state.scoringAlerts) })
+            }
+            SettingsSection("Spoiler mode", "Hides scores of live and finished games until you choose Show score") {
+                PillButton("Spoiler mode: " + if (state.spoilers) "On" else "Off", { callbacks.setSpoilers(!state.spoilers) })
             }
             SettingsSection("Trakt", if (state.trakt == TraktState.SignedIn) "Connected" else "Not connected") {
                 if (state.trakt == TraktState.SignedIn) PillButton("Sign out", callbacks.signOutTrakt)

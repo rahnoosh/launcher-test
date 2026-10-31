@@ -46,6 +46,8 @@ data class IptvChannel(
     val catchup: String? = null,
     val catchupSource: String? = null,
     val userAgent: String? = null,
+    /** Channel number from the provider (Xtream "num", M3U tvg-chno). */
+    val number: String? = null,
 ) {
     val key: String get() = "$sourceId:$id"
 }

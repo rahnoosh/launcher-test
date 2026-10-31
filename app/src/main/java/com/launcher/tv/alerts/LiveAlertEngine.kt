@@ -54,6 +54,8 @@ class LiveAlertEngine internal constructor(
     private val scoreboard: suspend (league: String) -> List<SportsEvent>?,
     private val clock: () -> Long,
     private val show: suspend (LiveAlert) -> Unit,
+    /** Spoiler mode: true if this game's score must not be shown. */
+    private val hidesScore: (SportsEvent) -> Boolean = { false },
 ) {
     constructor(context: Context, show: suspend (LiveAlert) -> Unit) : this(
         enabled = { AlertSettings.enabled(context) },
@@ -67,6 +69,7 @@ class LiveAlertEngine internal constructor(
         scoreboard = { SportsRepository.liveScoreboard(it) },
         clock = System::currentTimeMillis,
         show = show,
+        hidesScore = { com.launcher.tv.data.Spoilers.hides(context, it) },
     )
 
     private val lastSeen = mutableMapOf<String, SportsEvent>()
@@ -131,7 +134,8 @@ class LiveAlertEngine internal constructor(
         if (!before.live && !before.finished && now.live) {
             fire(now, "start", startWord(now.league), matchup, now.broadcast.orEmpty())
         }
-        if (now.live && scoringOn()) {
+        val hidden = hidesScore(now)
+        if (now.live && scoringOn() && !hidden) {
             val dA = (away.score?.toIntOrNull() ?: 0) - (before.away?.score?.toIntOrNull() ?: 0)
             val dH = (home.score?.toIntOrNull() ?: 0) - (before.home?.score?.toIntOrNull() ?: 0)
             val scorer = if (dA > 0) away else if (dH > 0) home else null
@@ -145,7 +149,8 @@ class LiveAlertEngine internal constructor(
             }
         }
         if (!before.finished && now.finished) {
-            fire(now, "final", "FINAL", score, now.broadcast.orEmpty())
+            if (hidden) fire(now, "final", "FINAL", matchup, "Score hidden (spoiler mode)")
+            else fire(now, "final", "FINAL", score, now.broadcast.orEmpty())
         }
     }
 

@@ -44,6 +44,7 @@ sealed interface Tile {
         override val title get() = event.title
         override val subtitle get() = when {
             event.live -> "Live · ${event.status ?: ""}".trimEnd(' ', '·')
+            event.finished && event.home != null && event.home.score == null -> "Final · score hidden"
             event.finished && event.home != null -> "Final · ${event.away?.score ?: 0}–${event.home.score ?: 0}"
             event.finished -> "Finished · highlights"
             else -> friendlyTime(event.startMillis)

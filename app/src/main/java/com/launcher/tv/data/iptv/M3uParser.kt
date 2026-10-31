@@ -60,6 +60,7 @@ object M3uParser {
                             catchup = catchup,
                             catchupSource = info["catchup-source"]?.ifBlank { null },
                             userAgent = userAgent,
+                            number = info["tvg-chno"]?.ifBlank { null },
                         )
                     }
                     info = emptyMap(); name = null; group = null; userAgent = null

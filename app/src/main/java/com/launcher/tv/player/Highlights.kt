@@ -18,7 +18,11 @@ object Highlights {
         val clip = (detail as? GameDetail.Team)?.highlights?.firstOrNull { ".mp4" in it.url || ".m3u8" in it.url }
         if (clip != null) {
             context.startActivity(
-                PlayerActivity.liveIntent(context, clip.url, "${clip.title} · ${event.title}", null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                PlayerActivity.liveIntent(
+                    context, clip.url,
+                    if (com.launcher.tv.data.Spoilers.hides(context, event)) "Highlights · ${event.title}" else "${clip.title} · ${event.title}",
+                    null,
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             )
             return null
         }

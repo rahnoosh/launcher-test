@@ -50,6 +50,7 @@ enum class QuickAction(val label: String, @DrawableRes val icon: Int) {
     DISPLAY("Display", R.drawable.ic_tv),
     SOUND("Sound", R.drawable.ic_volume),
     SLEEP("Sleep timer", R.drawable.ic_moon),
+    SPOILERS("Spoiler mode", R.drawable.ic_visibility_off),
     SCREENSAVER("Screensaver", R.drawable.ic_image),
     HOMEBASE("HomeBase", R.drawable.ic_tune),
     ALL("All settings", R.drawable.ic_settings),
@@ -79,6 +80,7 @@ fun openSystemSettings(context: Context, action: QuickAction) {
 fun BoxScope.ControlCenter(
     sleepMinutesLeft: Int,
     status: Map<QuickAction, String>,
+    active: Set<QuickAction> = emptySet(),
     onAction: (QuickAction) -> Unit,
 ) {
     val first = remember { FocusRequester() }
@@ -105,7 +107,7 @@ fun BoxScope.ControlCenter(
                 QuickTile(
                     action = a,
                     subtitle = sub,
-                    highlighted = a == QuickAction.SLEEP && sleepMinutesLeft > 0,
+                    highlighted = (a == QuickAction.SLEEP && sleepMinutesLeft > 0) || a in active,
                     onClick = { onAction(a) },
                     modifier = Modifier.weight(1f).then(if (i == 0) Modifier.focusRequester(first) else Modifier),
                 )

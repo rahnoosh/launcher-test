@@ -50,6 +50,20 @@ class LiveAlertEngineTest {
         assertEquals("NE 7 – 3 BUF", shown[4].title)
     }
 
+    @Test fun spoilerModeKeepsScoresOutOfAlerts() = runBlocking {
+        val e = LiveAlertEngine(
+            enabled = { true }, scoringOn = { true }, store = MemStore(),
+            schedule = { HomeData(myTeams = listOf(nfl(null, null, live = false))) }, scoreboard = { board }, clock = { now },
+            show = { shown += it }, hidesScore = { true },
+        )
+        now = start + 60_000; board = listOf(nfl(0, 0)); e.tick()
+        now += 60_000; board = listOf(nfl(7, 0)); e.tick()
+        now += 60_000; board = listOf(nfl(7, 3, live = false, finished = true)); e.tick()
+        assertEquals(listOf("KICKOFF", "FINAL"), shown.map { it.kicker })
+        assertEquals("Patriots @ Bills", shown[1].title)
+        assertEquals("Score hidden (spoiler mode)", shown[1].detail)
+    }
+
     @Test fun basketballOnlyAlertsOnCloseFinish() = runBlocking {
         now = start + 3600_000
         val e = engine(HomeData(myTeams = listOf(nba(0, 0, 1).copy(live = false))))

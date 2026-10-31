@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -45,6 +46,8 @@ class HomeActions(
     val pickChannel: (SportsEvent) -> Unit = {},
     val openGame: (SportsEvent) -> Unit = {},
     val highlights: (SportsEvent) -> Unit = {},
+    val revealScore: (SportsEvent) -> Unit = {},
+    val compareProviders: (SportsEvent) -> Unit = {},
     val playMedia: (com.launcher.tv.data.MediaItem) -> Unit = {},
     /** IPTV login saved: Watch/Play go straight to the stream. */
     val iptv: Boolean = false,
@@ -256,10 +259,12 @@ private fun GameHero(e: SportsEvent, actions: HomeActions, channels: ChannelLook
     val home = e.home
     Eyebrow(gameEyebrow(e), live = e.live)
     if (home != null && e.away != null) Scoreboard(e) else Title(e.title)
+    val scoreHidden = home != null && (e.live || e.finished) && home.score == null && e.away?.score == null
     if (e.finished) {
         Meta(listOfNotNull("Final", e.broadcast, e.venue))
         Buttons {
             PillButton("Highlights", { actions.highlights(e) }, primary = true, icon = R.drawable.ic_play)
+            if (scoreHidden) PillButton("Show score", { actions.revealScore(e) })
             PillButton("Game details", { actions.openGame(e) })
         }
         return
@@ -279,10 +284,11 @@ private fun GameHero(e: SportsEvent, actions: HomeActions, channels: ChannelLook
         if (actions.iptv) {
             PillButton(if (e.live) "Watch live" else "Watch", { actions.watchGame(e, false) }, primary = true, icon = R.drawable.ic_play)
             if (e.live && best?.channel?.archive == true) PillButton("Start over", { actions.watchGame(e, true) })
-            PillButton("Channels", { actions.pickChannel(e) })
+            PillButton("Best stream", { actions.compareProviders(e) })
         } else {
             PillButton("Watch in TiviMate", actions.openTiviMate, primary = true, icon = R.drawable.ic_play)
         }
+        if (scoreHidden) PillButton("Show score", { actions.revealScore(e) })
         PillButton("Game details", { actions.openGame(e) })
     }
 }
@@ -299,7 +305,12 @@ internal fun Scoreboard(e: SportsEvent, awayLabel: String = "Away", homeLabel: S
     val h = home.score?.toIntOrNull()
     Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         TeamBlock(away, awayLabel)
-        if (e.live || e.finished) {
+        if ((e.live || e.finished) && away.score == null && home.score == null) {
+            Text(
+                "Score hidden", color = Dim, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 8.dp).background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(50)).padding(horizontal = 14.dp, vertical = 6.dp),
+            )
+        } else if (e.live || e.finished) {
             Score(away.score ?: "0", bright = a == null || h == null || a >= h)
             Text("–", color = Faint, fontSize = 30.sp, fontWeight = FontWeight.Bold)
             Score(home.score ?: "0", bright = a == null || h == null || h >= a)

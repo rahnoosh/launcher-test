@@ -221,9 +221,13 @@ private fun LiveRow(r: BoardRow) {
     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
         if (e?.home != null && e.away != null) {
             Crest(e.away, 26.dp)
-            Text(e.away.score ?: "0", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 8.dp))
-            Text("–", color = Faint, fontSize = 16.sp)
-            Text(e.home.score ?: "0", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 8.dp))
+            if (e.away.score == null && e.home.score == null) {
+                Text("vs", color = Faint, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 10.dp))
+            } else {
+                Text(e.away.score ?: "0", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 8.dp))
+                Text("–", color = Faint, fontSize = 16.sp)
+                Text(e.home.score ?: "0", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 8.dp))
+            }
             Crest(e.home, 26.dp)
             Spacer(Modifier.width(10.dp))
             Column {

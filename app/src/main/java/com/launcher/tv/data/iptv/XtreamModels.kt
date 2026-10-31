@@ -24,6 +24,7 @@ data class XtreamChannel(
     @SerialName("tv_archive") val tvArchive: String? = null,
     @SerialName("tv_archive_duration") val archiveDays: String? = null,
     @SerialName("stream_icon") val icon: String? = null,
+    val num: String? = null,
 ) {
     val hasArchive: Boolean get() = tvArchive == "1" || tvArchive == "true"
 }

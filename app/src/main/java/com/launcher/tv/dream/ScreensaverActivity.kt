@@ -22,7 +22,7 @@ class ScreensaverActivity : ComponentActivity() {
         lifecycleScope.launch { data.run() }
         setContent {
             val d by data.state.collectAsState()
-            HomeBaseTheme { ScreensaverLayout(d) }
+            HomeBaseTheme { ScreensaverLayout(com.launcher.tv.data.Spoilers.apply(this@ScreensaverActivity, d)) }
         }
     }
 

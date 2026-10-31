@@ -15,7 +15,7 @@ class M3uAndGuideTest {
         #EXTM3U url-tvg="http://epg.example.com/guide.xml.gz" x-tvg-url="http://other/guide.xml"
         #EXTINF:-1 tvg-id="espn.us" tvg-name="US: ESPN" tvg-logo="http://logo/espn.png" group-title="USA | Sports, Live" catchup="default" catchup-days="3" catchup-source="http://cdn.example.com/espn/index-{utc}-{duration}.m3u8",US: ESPN FHD
         http://cdn.example.com/espn/index.m3u8
-        #EXTINF:-1 tvg-id="" group-title="USA | Locals",US: CBS (WBZ) Boston
+        #EXTINF:-1 tvg-id="" tvg-chno="1234" group-title="USA | Locals",US: CBS (WBZ) Boston
         #EXTVLCOPT:http-user-agent=TiviMate/5.0
         http://line.example.com:8080/joe/secret/1234
         #EXTINF:-1 group-title="VOD | Series",The Bear S04 E03
@@ -34,6 +34,7 @@ class M3uAndGuideTest {
         assertTrue(espn.archive)
         assertNull(r.channels[1].epgId)                         // empty tvg-id
         assertEquals("TiviMate/5.0", r.channels[1].userAgent)
+        assertEquals("1234", r.channels[1].number)
         assertEquals(listOf("The Bear S04 E03", "|EN| Dune: Part Two (2024)"), r.vod.map { it.name })
     }
 

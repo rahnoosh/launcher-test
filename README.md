@@ -136,6 +136,20 @@ After that:
   highlights").
 - The *Final* alert card now opens the game page.
 
+## 8a. Spoiler mode, best stream, and TiviMate
+
+- **Spoiler mode** (Quick settings tile, or HomeBase settings) hides the scores of live and finished games
+  everywhere: tiles, the hero, the bottom strip, game pages (line score, plays, leaders, stats, F1 results and
+  standings, UFC winners), the screensaver, and alerts. With spoiler mode on, alerts announce kickoff and the end
+  of a game, but no scoring plays and no final score. **Show score** reveals one game; HomeBase remembers that.
+- **Best stream** (on a game, or its page) answers "which provider should I watch this on?". It takes the
+  channels that match the event from all your providers and plays the best one or two from each for a few
+  seconds, one at a time so your providers' connection limits aren't exceeded. It measures how fast each starts,
+  its bitrate and resolution, and ranks them with a **BEST** label. Pick a row to watch it in HomeBase.
+- **TiviMate** on a row opens TiviMate and shows a card for 30 seconds with the playlist, group, channel name
+  and channel number to pick. While the card is up, your remote works in TiviMate as normal. TiviMate has no
+  documented way for other apps to open a specific channel, so HomeBase can't switch it for you.
+
 ## 8b. Live alerts
 
 While the HomeBase Home button service is on (step 4), a card appears in the top-right corner over any app,

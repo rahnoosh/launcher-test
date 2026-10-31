@@ -27,6 +27,9 @@ class GameActivity : ComponentActivity() {
     private var detail by mutableStateOf<GameDetail?>(null)
     private var loading by mutableStateOf(true)
     private var picker by mutableStateOf<ChannelLookup?>(null)
+    private var hidden by mutableStateOf(false)
+    private var check by mutableStateOf<StreamCheckState?>(null)
+    private var checkJob: kotlinx.coroutines.Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +37,7 @@ class GameActivity : ComponentActivity() {
             ?.let { runCatching { Http.json.decodeFromString(SportsEvent.serializer(), it) }.getOrNull() }
             ?: return finish()
 
+        hidden = com.launcher.tv.data.Spoilers.hides(this, event)
         lifecycleScope.launch {
             while (true) {
                 runCatching { GameDetails.load(event) }.getOrNull()?.let { detail = it }
@@ -55,12 +59,38 @@ class GameActivity : ComponentActivity() {
                 }
             },
             highlights = { lifecycleScope.launch { Highlights.play(this@GameActivity, event, detail)?.let(::toast) } },
+            revealScore = {
+                com.launcher.tv.data.Spoilers.reveal(this, event.id)
+                hidden = false
+            },
+            compare = {
+                checkJob?.cancel()
+                check = StreamCheckState(event)
+                checkJob = lifecycleScope.launch {
+                    runCatching {
+                        com.launcher.tv.data.iptv.ProviderCheck(this@GameActivity).run(event, null) { rows, running ->
+                            check = check?.copy(rows = rows, running = running)
+                        }
+                    }.onFailure { e -> if (e !is kotlinx.coroutines.CancellationException) check = check?.copy(running = false, error = e.message) }
+                }
+            },
             iptv = library.isConfigured,
         )
 
         setContent {
             HomeBaseTheme {
-                GamePageLayout(event, detail, loading, actions)
+                GamePageLayout(event, detail, loading, actions, hideScores = hidden)
+                check?.let { c ->
+                    StreamCheckDialog(
+                        c,
+                        onWatch = { row -> checkJob?.cancel(); check = null; watch(event, row.candidate, false) },
+                        onTiviMate = { row ->
+                            checkJob?.cancel(); check = null
+                            com.launcher.tv.player.TiviMateHelper.open(this, event, row.candidate.channel, row.provider)
+                        },
+                        onDismiss = { checkJob?.cancel(); check = null },
+                    )
+                }
                 picker?.let { lookup ->
                     ChannelPicker(event, lookup, onPick = { c -> picker = null; watch(event, c, false) }, onDismiss = { picker = null })
                 }

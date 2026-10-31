@@ -38,6 +38,8 @@ class GameActions(
     val startOver: () -> Unit = {},
     val channels: () -> Unit = {},
     val highlights: () -> Unit = {},
+    val revealScore: () -> Unit = {},
+    val compare: () -> Unit = {},
     val iptv: Boolean = false,
 )
 
@@ -46,13 +48,15 @@ class GameActions(
  * team stats (team sports), the race weekend, results and standings (F1), or the fight card (UFC).
  */
 @Composable
-fun GamePageLayout(event: SportsEvent, detail: GameDetail?, loading: Boolean, actions: GameActions) {
+fun GamePageLayout(event: SportsEvent, detail: GameDetail?, loading: Boolean, actions: GameActions, hideScores: Boolean = false) {
     // Merge the latest score from the summary into the event shown in the header.
     val team = detail as? GameDetail.Team
-    val e = if (team != null) event.copy(
+    val merged = if (team != null) event.copy(
         home = event.home?.let { it.copy(score = team.homeScore ?: it.score) },
         away = event.away?.let { it.copy(score = team.awayScore ?: it.score) },
     ) else event
+    // Spoiler mode: nothing on this page may give the result away.
+    val e = if (hideScores) com.launcher.tv.data.Spoilers.safe(merged) else merged
 
     Box(Modifier.fillMaxSize()) {
         HeroBackground(Tile.Game(e))
@@ -63,7 +67,7 @@ fun GamePageLayout(event: SportsEvent, detail: GameDetail?, loading: Boolean, ac
             if (e.home != null && e.away != null) Scoreboard(e, team?.awayRecord ?: "Away", team?.homeRecord ?: "Home") else Title(e.title)
             Meta(
                 listOfNotNull(
-                    team?.status ?: if (e.finished) "Final" else if (e.live) e.status else friendlyTime(e.startMillis),
+                    (if (hideScores) null else team?.status) ?: if (e.finished) "Final" else if (e.live) e.status ?: "Live" else friendlyTime(e.startMillis),
                     (detail as? GameDetail.F1)?.circuit ?: team?.venue ?: e.venue,
                 )
             )
@@ -73,19 +77,26 @@ fun GamePageLayout(event: SportsEvent, detail: GameDetail?, loading: Boolean, ac
                     actions.iptv -> {
                         PillButton(if (e.live) "Watch live" else "Watch", actions.watch, primary = true, icon = R.drawable.ic_play)
                         if (e.live) PillButton("Start over", actions.startOver)
+                        PillButton("Best stream", actions.compare)
                         PillButton("Channels", actions.channels)
                     }
                     else -> PillButton("Watch in TiviMate", actions.watch, primary = true, icon = R.drawable.ic_play)
                 }
-                if (!e.finished && (team?.highlights?.isNotEmpty() == true)) PillButton("Highlights", actions.highlights)
+                if (hideScores) PillButton("Show score", actions.revealScore)
+                if (!e.finished && !hideScores && (team?.highlights?.isNotEmpty() == true)) PillButton("Highlights", actions.highlights)
             }
             Spacer(Modifier.height(18.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                when (detail) {
-                    is GameDetail.Team -> TeamCards(detail, e.away?.abbr ?: "Away", e.home?.abbr ?: "Home")
-                    is GameDetail.F1 -> F1Cards(detail)
-                    is GameDetail.Fight -> FightCard(detail)
-                    null -> InfoCard(if (loading) "Loading" else "Details", 360.dp) {
+                when {
+                    hideScores && detail is GameDetail.Team -> InfoCard("Spoiler mode", 380.dp) {
+                        Text("Score, scoring plays, leaders and stats are hidden.", color = Color.White, fontSize = 13.sp)
+                        Text("Choose Show score when you're ready.", color = Dim, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                    }
+                    detail is GameDetail.Team -> TeamCards(detail, e.away?.abbr ?: "Away", e.home?.abbr ?: "Home")
+                    // After the race, results and standings would spoil it; the schedule is fine.
+                    detail is GameDetail.F1 -> F1Cards(if (hideScores) detail.copy(results = emptyList(), standings = emptyList()) else detail)
+                    detail is GameDetail.Fight -> FightCard(if (hideScores) detail.copy(bouts = detail.bouts.map { it.copy(winner = null) }) else detail)
+                    else -> InfoCard(if (loading) "Loading" else "Details", 360.dp) {
                         Text(
                             if (loading) "Loading game details…" else "No extra details for this event yet.",
                             color = Dim, fontSize = 12.sp,
