@@ -94,7 +94,7 @@ fun buildTiles(tab: HomeTab, s: HomeUiState): List<Tile> {
     val history = s.history.filter { !it.finished }
 
     val tiles: List<Tile> = when (tab) {
-        HomeTab.FOR_YOU -> buildList {
+        HomeTab.FOR_YOU -> buildList<Tile> {
             history.take(3).forEach { add(Tile.Resume(it)) }
             live.forEach { add(Tile.Game(it)) }
             if (signedIn) d.upNext.take(6).forEach { add(Tile.Media(it, Tile.Role.UP_NEXT)) }
@@ -106,7 +106,7 @@ fun buildTiles(tab: HomeTab, s: HomeUiState): List<Tile> {
             s.apps.firstOrNull { it.packageName == AppsRepository.TIVIMATE }?.let { add(Tile.App(it)) }
             add(Tile.AllApps)
         }
-        HomeTab.TV -> buildList {
+        HomeTab.TV -> buildList<Tile> {
             s.history.take(10).forEach { add(Tile.Resume(it)) }
             if (signedIn) {
                 d.upNext.forEach { add(Tile.Media(it, Tile.Role.UP_NEXT)) }
@@ -115,8 +115,8 @@ fun buildTiles(tab: HomeTab, s: HomeUiState): List<Tile> {
             }
             addAll(traktPrompt)
         }
-        HomeTab.SPORTS -> (live + allSports.filter { !it.live }.sortedBy { it.startMillis }).map { Tile.Game(it) }
-        HomeTab.APPS -> s.apps.map { Tile.App(it) }
+        HomeTab.SPORTS -> (live + allSports.filter { !it.live }.sortedBy { it.startMillis }).map<SportsEvent, Tile> { Tile.Game(it) }
+        HomeTab.APPS -> s.apps.map<AppEntry, Tile> { Tile.App(it) }
     }.distinctBy { it.key }
 
     if (tiles.isNotEmpty()) return tiles
