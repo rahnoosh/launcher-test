@@ -27,3 +27,11 @@ jobs:
         with:
           name: HomeBase-apk
           path: app/build/outputs/apk/release/*.apk
+      - name: Unit tests + home screen screenshots
+        run: ./gradlew --no-daemon recordPaparazziDebug
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: HomeBase-screenshots
+          path: app/src/test/snapshots/images/
+          if-no-files-found: ignore

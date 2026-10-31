@@ -3,6 +3,7 @@ package com.launcher.tv.data.sports
 import com.launcher.tv.BuildConfig
 import com.launcher.tv.data.Http
 import com.launcher.tv.data.SportsEvent
+import com.launcher.tv.data.TeamInfo
 import com.launcher.tv.data.arr
 import com.launcher.tv.data.obj
 import com.launcher.tv.data.str
@@ -161,6 +162,19 @@ object SportsRepository {
             else -> null
         }
 
+        fun team(c: JsonObject?): TeamInfo? {
+            val t = c?.obj("team") ?: return null
+            val n = name(c) ?: return null
+            return TeamInfo(
+                name = n,
+                abbr = t.str("abbreviation") ?: n.take(3).uppercase(),
+                color = t.str("color"),
+                altColor = t.str("alternateColor"),
+                logo = logo(c),
+                score = score(c),
+            )
+        }
+
         val title = if (!useEventName && home != null && away != null) "${name(away)} @ ${name(home)}"
         else ev.str("name") ?: ev.str("shortName") ?: return null
 
@@ -180,6 +194,8 @@ object SportsRepository {
             broadcast = espnBroadcasts(comp),
             imageUrl = logo(home) ?: logo(away),
             venue = comp?.obj("venue")?.str("fullName"),
+            home = if (useEventName) null else team(home),
+            away = if (useEventName) null else team(away),
         )
     }
 

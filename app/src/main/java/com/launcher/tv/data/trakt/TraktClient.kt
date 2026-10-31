@@ -154,6 +154,8 @@ class TraktClient(context: Context) {
                         subtitle = episodeLabel(next) +
                             if (progress.aired > progress.completed + 1) " · ${progress.aired - progress.completed} left" else "",
                         imageUrl = Tmdb.backdrop(Tmdb.Type.TV, ws.show.ids.tmdb),
+                        posterUrl = Tmdb.poster(Tmdb.Type.TV, ws.show.ids.tmdb),
+                        timeMillis = aired,
                     )
                 }
             }
@@ -171,7 +173,8 @@ class TraktClient(context: Context) {
                     kind = MediaKind.MOVIE,
                     title = w.movie.title,
                     subtitle = w.movie.year?.toString().orEmpty(),
-                    imageUrl = Tmdb.poster(Tmdb.Type.MOVIE, w.movie.ids.tmdb),
+                    imageUrl = Tmdb.backdrop(Tmdb.Type.MOVIE, w.movie.ids.tmdb),
+                    posterUrl = Tmdb.poster(Tmdb.Type.MOVIE, w.movie.ids.tmdb),
                 )
             }
         }.awaitAll()
@@ -190,6 +193,7 @@ class TraktClient(context: Context) {
                     title = c.show.title,
                     subtitle = episodeLabel(c.episode),
                     imageUrl = Tmdb.backdrop(Tmdb.Type.TV, c.show.ids.tmdb),
+                    posterUrl = Tmdb.poster(Tmdb.Type.TV, c.show.ids.tmdb),
                     timeMillis = parseTime(c.firstAired),
                 )
             }

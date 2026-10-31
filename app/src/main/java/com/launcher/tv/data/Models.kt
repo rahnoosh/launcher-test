@@ -11,9 +11,23 @@ data class MediaItem(
     val kind: MediaKind,
     val title: String,
     val subtitle: String,
+    /** Wide artwork (TMDB backdrop), used for the full-screen hero. */
     val imageUrl: String? = null,
-    /** Sort key / display time, e.g. air date for upcoming episodes. */
+    /** Portrait artwork (TMDB poster), used for tiles. */
+    val posterUrl: String? = null,
+    /** Air date: for "next up" episodes when it aired, for upcoming ones when it will air. */
     val timeMillis: Long? = null,
+)
+
+@Serializable
+data class TeamInfo(
+    val name: String,
+    val abbr: String,
+    /** Hex without '#', as ESPN sends it ("002244"). */
+    val color: String? = null,
+    val altColor: String? = null,
+    val logo: String? = null,
+    val score: String? = null,
 )
 
 @Serializable
@@ -30,6 +44,9 @@ data class SportsEvent(
     val broadcast: String? = null,
     val imageUrl: String? = null,
     val venue: String? = null,
+    /** Only for team sports (ESPN). */
+    val home: TeamInfo? = null,
+    val away: TeamInfo? = null,
 )
 
 /** Everything the home screen shows. Cached to disk so Home opens instantly. */

@@ -22,6 +22,7 @@ data class HistoryEntry(
     val subtitle: String = "",
     val isEpisode: Boolean = false,
     val imageUrl: String? = null,
+    val posterUrl: String? = null,
     val positionMs: Long = 0,
     val durationMs: Long = 0,
     val lastPlayedAt: Long = 0,

@@ -7,9 +7,9 @@ import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-data class AppEntry(val label: String, val packageName: String, val banner: Bitmap?, val isBanner: Boolean)
+data class AppEntry(val label: String, val packageName: String, val banner: Bitmap?, val icon: Bitmap?)
 
-/** Installed TV apps for the Apps row, plus launching apps by package. */
+/** Installed TV apps for the Apps tab, plus launching apps by package. */
 class AppsRepository(private val context: Context) {
     private val pm = context.packageManager
 
@@ -21,14 +21,11 @@ class AppsRepository(private val context: Context) {
             .map { ri ->
                 val info = ri.activityInfo
                 val banner = info.loadBanner(pm) ?: info.applicationInfo.loadBanner(pm)
-                val drawable = banner ?: info.loadIcon(pm)
                 AppEntry(
                     label = ri.loadLabel(pm).toString(),
                     packageName = info.packageName,
-                    banner = runCatching {
-                        if (banner != null) drawable.toBitmap(320, 180) else drawable.toBitmap(128, 128)
-                    }.getOrNull(),
-                    isBanner = banner != null,
+                    banner = banner?.let { runCatching { it.toBitmap(320, 180) }.getOrNull() },
+                    icon = runCatching { info.loadIcon(pm).toBitmap(128, 128) }.getOrNull(),
                 )
             }
             .sortedWith(compareBy<AppEntry> { it.packageName != TIVIMATE }.thenBy { it.label.lowercase() })

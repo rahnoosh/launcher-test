@@ -22,6 +22,7 @@ class Scrobbler(private val trakt: TraktClient) {
         val displayTitle: String,
         val subtitle: String,
         val imageUrl: String?,
+        val posterUrl: String? = null,
     )
 
     val enabled: Boolean get() = trakt.isConfigured && trakt.isSignedIn
@@ -41,6 +42,7 @@ class Scrobbler(private val trakt: TraktClient) {
                         displayTitle = movie.title,
                         subtitle = movie.year?.toString().orEmpty(),
                         imageUrl = Tmdb.backdrop(Tmdb.Type.MOVIE, movie.ids.tmdb),
+                        posterUrl = Tmdb.poster(Tmdb.Type.MOVIE, movie.ids.tmdb),
                     )
                 }
                 TitleParser.Kind.EPISODE -> {
@@ -57,6 +59,7 @@ class Scrobbler(private val trakt: TraktClient) {
                         displayTitle = show.title,
                         subtitle = "S%02dE%02d".format(s, e),
                         imageUrl = Tmdb.backdrop(Tmdb.Type.TV, show.ids.tmdb),
+                        posterUrl = Tmdb.poster(Tmdb.Type.TV, show.ids.tmdb),
                     )
                 }
                 else -> null

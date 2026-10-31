@@ -16,6 +16,7 @@ fun friendlyTime(millis: Long): String {
     val days = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(zone), dt.toLocalDate())
     return when {
         days == 0L -> "Today ${time.format(dt)}"
+        days == -1L -> "Yesterday ${time.format(dt)}"
         days == 1L -> "Tomorrow ${time.format(dt)}"
         days in 2..6 -> dayTime.format(dt)
         else -> dateTime.format(dt)

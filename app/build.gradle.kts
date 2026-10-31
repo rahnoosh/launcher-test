@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    // Renders the Compose home screen to PNGs on the JVM (./gradlew recordPaparazziDebug).
+    alias(libs.plugins.paparazzi)
 }
 
 // API keys come from local.properties (local builds) or environment variables (CI).

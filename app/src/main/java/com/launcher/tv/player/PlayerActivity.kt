@@ -91,7 +91,9 @@ class PlayerActivity : ComponentActivity() {
             if (isVod()) saveHistory(moveToFront = true)
             match = scrobbler.identify(parsed)
             match?.let { m ->
-                history.update(url) { it.copy(title = m.displayTitle, subtitle = m.subtitle, imageUrl = m.imageUrl ?: it.imageUrl) }
+                history.update(url) {
+                    it.copy(title = m.displayTitle, subtitle = m.subtitle, imageUrl = m.imageUrl ?: it.imageUrl, posterUrl = m.posterUrl ?: it.posterUrl)
+                }
                 if (player.isPlaying) startScrobble()
             }
         }
@@ -213,6 +215,7 @@ class PlayerActivity : ComponentActivity() {
             ).firstOrNull().orEmpty(),
             isEpisode = parsed.kind == TitleParser.Kind.EPISODE,
             imageUrl = match?.imageUrl ?: previous?.imageUrl,
+            posterUrl = match?.posterUrl ?: previous?.posterUrl,
             positionMs = positionMs,
             durationMs = durationMs.takeIf { it > 0 } ?: previous?.durationMs ?: 0,
             lastPlayedAt = System.currentTimeMillis(),
