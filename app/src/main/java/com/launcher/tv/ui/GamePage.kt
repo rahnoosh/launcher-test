@@ -82,7 +82,7 @@ fun GamePageLayout(event: SportsEvent, detail: GameDetail?, loading: Boolean, ac
             Spacer(Modifier.height(18.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (detail) {
-                    is GameDetail.Team -> TeamCards(detail)
+                    is GameDetail.Team -> TeamCards(detail, e.away?.abbr ?: "Away", e.home?.abbr ?: "Home")
                     is GameDetail.F1 -> F1Cards(detail)
                     is GameDetail.Fight -> FightCard(detail)
                     null -> InfoCard(if (loading) "Loading" else "Details", 360.dp) {
@@ -111,7 +111,7 @@ private fun InfoCard(title: String, width: Dp, content: @Composable ColumnScope.
 // ---------------- team sports ----------------
 
 @Composable
-private fun TeamCards(d: GameDetail.Team) {
+private fun TeamCards(d: GameDetail.Team, awayAbbr: String, homeAbbr: String) {
     InfoCard("Box score", 290.dp) {
         val line = d.line
         if (line == null) {
@@ -128,8 +128,8 @@ private fun TeamCards(d: GameDetail.Team) {
                 }
             }
             RowOf("", cols, "T", bold = false)
-            RowOf(d.leaders.getOrNull(0)?.team ?: "Away", line.away.drop(drop).padEnd(cols.size), line.awayTotal, bold = true)
-            RowOf(d.leaders.getOrNull(1)?.team ?: "Home", line.home.drop(drop).padEnd(cols.size), line.homeTotal, bold = true)
+            RowOf(awayAbbr, line.away.drop(drop).padEnd(cols.size), line.awayTotal, bold = true)
+            RowOf(homeAbbr, line.home.drop(drop).padEnd(cols.size), line.homeTotal, bold = true)
         }
         if (d.leaders.isNotEmpty()) {
             Text("LEADERS", color = Faint, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
