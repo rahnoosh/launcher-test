@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -86,7 +87,7 @@ private fun GlowBackground(c: Color) {
     Box(
         Modifier.fillMaxSize().background(
             Brush.radialGradient(
-                listOf(c.copy(alpha = 0.95f), c.darker(0.5f).copy(alpha = 0.6f), Base),
+                listOf(lerp(c, Color.White, 0.18f), c.darker(0.35f).copy(alpha = 0.8f), Base),
                 center = androidx.compose.ui.geometry.Offset(1400f, 300f),
                 radius = 1400f,
             )
@@ -105,17 +106,25 @@ private fun androidx.compose.foundation.layout.BoxScope.GameBackground(e: Sports
         }
         return
     }
+    val homeC = home.mainColor()
+    val awayC = away.mainColor()
+    val accentC = hexColor(home.altColor)?.takeIf { it != Color.White } ?: lerp(homeC, Color.White, 0.3f)
+    Box(Modifier.fillMaxSize().background(homeC.darker(0.55f)))
     Box(
         Modifier.fillMaxSize().background(
-            Brush.linearGradient(listOf(away.mainColor().darker(0.25f), Base, home.mainColor().darker(0.2f)))
+            Brush.radialGradient(
+                listOf(lerp(awayC, Color.White, 0.12f).copy(alpha = 0.85f), Color.Transparent),
+                center = androidx.compose.ui.geometry.Offset(1250f, 180f),
+                radius = 950f,
+            )
         )
     )
     Box(
         Modifier.fillMaxSize().background(
             Brush.radialGradient(
-                listOf(home.mainColor().copy(alpha = 0.55f), Color.Transparent),
-                center = androidx.compose.ui.geometry.Offset(1500f, 250f),
-                radius = 900f,
+                listOf(accentC.copy(alpha = 0.5f), Color.Transparent),
+                center = androidx.compose.ui.geometry.Offset(1780f, 760f),
+                radius = 800f,
             )
         )
     )
@@ -247,7 +256,7 @@ private fun GameHero(e: SportsEvent, actions: HomeActions) {
         Title(e.title)
     }
     Meta(
-        if (e.live) listOfNotNull(e.status, e.venue)
+        if (e.live) listOfNotNull(if (home != null) e.status?.replace(Regex("""^\d+-\d+\s*"""), "") else e.status, e.venue)
         else listOfNotNull(friendlyTime(e.startMillis), if (home == null) e.status else null, e.venue)
     )
     Buttons {

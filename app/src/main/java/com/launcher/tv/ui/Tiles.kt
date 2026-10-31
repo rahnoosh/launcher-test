@@ -147,10 +147,9 @@ fun buildStrip(tab: HomeTab, s: HomeUiState): Strip {
 
 private fun SportsEvent.toStrip() = StripItem(
     key = "s-$id",
-    kicker = if (live) "Live now" else league,
+    kicker = listOfNotNull(if (live) "Live now" else league, broadcast).joinToString(" · "),
     title = title,
-    time = if (live) listOfNotNull(status, broadcast).joinToString(" · ")
-    else listOfNotNull(friendlyTime(startMillis), broadcast ?: status).joinToString(" · "),
+    time = if (live) status ?: "Live" else friendlyTime(startMillis),
     live = live,
     teams = listOfNotNull(away, home),
     imageUrl = imageUrl.takeIf { home == null },

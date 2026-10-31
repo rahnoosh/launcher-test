@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -208,7 +209,7 @@ fun HomeLayout(
                                 .onFocusChanged { if (it.isFocused || it.hasFocus) selectedKey = tile.key },
                         )
                         AnimatedVisibility(visible = isSelected, enter = fadeIn(tween(200)), exit = fadeOut(tween(100))) {
-                            Column(Modifier.padding(start = 12.dp, end = 6.dp).width(140.dp)) {
+                            Column(Modifier.padding(start = 12.dp, end = 8.dp).widthIn(max = 150.dp)) {
                                 Text(tile.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 16.sp)
                                 if (tile.subtitle.isNotBlank()) {
                                     Text(tile.subtitle, color = Dim, fontSize = 9.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))

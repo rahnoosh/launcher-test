@@ -217,10 +217,12 @@ private fun Artwork(url: String?, title: String, w: Float) {
     } else {
         val c = seedColor(title)
         Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(c.copy(alpha = 1f), c.darker(0.6f)))))
-        Box(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
+        val longest = title.split(' ').maxOfOrNull { it.length }?.coerceAtLeast(3) ?: 3
+        val fs = minOf(w * 0.16f, (w - 14f) / (longest * 0.72f))
+        Box(Modifier.fillMaxSize().padding(7.dp), contentAlignment = Alignment.Center) {
             Text(
                 title.uppercase(),
-                color = Color(0xFFFFF3DD), fontSize = (w * 0.13f).sp, lineHeight = (w * 0.15f).sp,
+                color = Color(0xFFFFF3DD), fontSize = fs.sp, lineHeight = (fs * 1.15f).sp,
                 fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
                 maxLines = 4, overflow = TextOverflow.Ellipsis,
             )
