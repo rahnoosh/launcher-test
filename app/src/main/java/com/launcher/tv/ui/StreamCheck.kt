@@ -115,7 +115,7 @@ fun StreamCheckContent(state: StreamCheckState, onWatch: (CheckRow) -> Unit, onT
                 }
             }
             Text(
-                "Select a row to watch it in HomeBase, or TiviMate to open TiviMate with that provider and channel shown on screen.",
+                "Select a row to watch it in HomeBase, or TiviMate to open it there (with one-press tuning on, HomeBase types the channel number for you).",
                 color = Faint, fontSize = 10.sp, modifier = Modifier.padding(top = 10.dp),
             )
         }

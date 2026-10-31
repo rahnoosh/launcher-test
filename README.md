@@ -150,6 +150,25 @@ After that:
   and channel number to pick. While the card is up, your remote works in TiviMate as normal. TiviMate has no
   documented way for other apps to open a specific channel, so HomeBase can't switch it for you.
 
+### One-press tuning in TiviMate (experimental)
+
+TiviMate switches channel when you type a channel number, but the Xiaomi remote has no number keys. With
+one-press tuning on, the **TiviMate** button opens TiviMate and types the number for you. To do that, HomeBase
+uses the box's own network debugging (ADB on port 5555, the same connection you used to install it).
+
+1. Make sure ADB over the network is on. If `adb connect <box-ip>:5555` works from your computer, it is.
+   If not, connect by USB once and run `adb tcpip 5555`. Some boxes turn this off again after a reboot; if
+   tuning stops working after one, run it again.
+2. In **Quick settings → HomeBase**, turn **One-press tuning** on. The TV asks *Allow network debugging?*:
+   tick **Always allow from this computer** and choose **Allow**. **Test connection** checks it any time.
+3. HomeBase uses your provider's channel numbers: Xtream `num`, or M3U `tvg-chno`. If TiviMate opens the wrong
+   channel, set TiviMate to number channels the way your playlist does, rather than numbering them in order.
+   With several playlists in TiviMate, their numbers can overlap.
+
+If tuning fails for any reason, HomeBase falls back to the card that tells you which channel to pick.
+Network debugging lets any device on your network that you've allowed control the box, so only accept
+prompts you expect. You can turn it off in Developer options when you're not using this.
+
 ## 8b. Live alerts
 
 While the HomeBase Home button service is on (step 4), a card appears in the top-right corner over any app,

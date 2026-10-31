@@ -68,6 +68,8 @@ data class HomeUiState(
     val alerts: Boolean = true,
     val scoringAlerts: Boolean = true,
     val sleepMinutes: Int = 0,
+    /** Experimental: type the channel number into TiviMate over local ADB. */
+    val tiviMateTuning: Boolean = false,
     /** "Best stream" dialog for an event. */
     val streamCheck: StreamCheckState? = null,
     /** Spoiler mode: hide scores until "Show score". */
@@ -92,6 +94,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             alerts = AlertSettings.enabled(app),
             scoringAlerts = AlertSettings.scoring(app),
             spoilers = com.launcher.tv.data.Spoilers.enabled(app),
+            tiviMateTuning = com.launcher.tv.player.TiviMateTuner.enabled(app),
             revealed = com.launcher.tv.data.Spoilers.revealed(app),
         )
     )
@@ -285,7 +288,30 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     fun tiviMateFromCheck(row: com.launcher.tv.data.iptv.CheckRow) {
         val event = _state.value.streamCheck?.event
         closeStreamCheck()
-        com.launcher.tv.player.TiviMateHelper.open(getApplication(), event, row.candidate.channel, row.provider)
+        com.launcher.tv.player.TiviMateHelper.openOrTune(getApplication(), event, row.candidate.channel, row.provider)
+    }
+
+    fun setTiviMateTuning(on: Boolean) {
+        com.launcher.tv.player.TiviMateTuner.setEnabled(getApplication(), on)
+        _state.update { it.copy(tiviMateTuning = on) }
+        if (on) testTiviMateTuning()
+    }
+
+    /** Connects to the box's own ADB once; the TV shows "Allow debugging?" the first time. */
+    fun testTiviMateTuning() {
+        viewModelScope.launch {
+            _state.update { it.copy(busy = "Connecting… accept 'Allow debugging' on the TV if asked") }
+            val r = com.launcher.tv.player.TiviMateTuner.test(getApplication())
+            _state.update {
+                it.copy(
+                    busy = null,
+                    message = r.fold(
+                        onSuccess = { "One-press tuning is ready" },
+                        onFailure = { e -> "One-press tuning can't connect: " + com.launcher.tv.player.TiviMateTuner.explain(e) },
+                    ),
+                )
+            }
+        }
     }
 
     fun setSpoilers(on: Boolean) {

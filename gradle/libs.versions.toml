@@ -13,6 +13,7 @@ coreKtx = "1.15.0"
 media3 = "1.5.1"
 junit = "4.13.2"
 paparazzi = "1.3.5"
+dadb = "1.2.10"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -31,6 +32,7 @@ media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = 
 media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }
 media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
 junit = { module = "junit:junit", version.ref = "junit" }
+dadb = { module = "dev.mobile:dadb", version.ref = "dadb" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

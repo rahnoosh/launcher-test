@@ -119,6 +119,8 @@ class HomeCallbacks(
     val closeStreamCheck: () -> Unit = {},
     val watchFromCheck: (CheckRow) -> Unit = {},
     val tiviMateFromCheck: (CheckRow) -> Unit = {},
+    val setTiviMateTuning: (Boolean) -> Unit = {},
+    val testTiviMateTuning: () -> Unit = {},
 )
 
 @Composable
@@ -166,6 +168,8 @@ fun HomeScreen(vm: HomeViewModel) {
             closeStreamCheck = vm::closeStreamCheck,
             watchFromCheck = vm::watchFromCheck,
             tiviMateFromCheck = vm::tiviMateFromCheck,
+            setTiviMateTuning = vm::setTiviMateTuning,
+            testTiviMateTuning = vm::testTiviMateTuning,
         )
     }
     HomeLayout(state, callbacks)
@@ -538,6 +542,13 @@ private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXt
             }
             SettingsSection("Spoiler mode", "Hides scores of live and finished games until you choose Show score") {
                 PillButton("Spoiler mode: " + if (state.spoilers) "On" else "Off", { callbacks.setSpoilers(!state.spoilers) })
+            }
+            SettingsSection(
+                "One-press tuning in TiviMate (experimental)",
+                "Types the channel number into TiviMate for you, using the box's own network debugging. See README.",
+            ) {
+                PillButton("Tuning: " + if (state.tiviMateTuning) "On" else "Off", { callbacks.setTiviMateTuning(!state.tiviMateTuning) })
+                if (state.tiviMateTuning) PillButton("Test connection", callbacks.testTiviMateTuning)
             }
             SettingsSection("Trakt", if (state.trakt == TraktState.SignedIn) "Connected" else "Not connected") {
                 if (state.trakt == TraktState.SignedIn) PillButton("Sign out", callbacks.signOutTrakt)

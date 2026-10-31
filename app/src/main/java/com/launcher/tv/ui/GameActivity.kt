@@ -86,7 +86,7 @@ class GameActivity : ComponentActivity() {
                         onWatch = { row -> checkJob?.cancel(); check = null; watch(event, row.candidate, false) },
                         onTiviMate = { row ->
                             checkJob?.cancel(); check = null
-                            com.launcher.tv.player.TiviMateHelper.open(this, event, row.candidate.channel, row.provider)
+                            com.launcher.tv.player.TiviMateHelper.openOrTune(this, event, row.candidate.channel, row.provider)
                         },
                         onDismiss = { checkJob?.cancel(); check = null },
                     )

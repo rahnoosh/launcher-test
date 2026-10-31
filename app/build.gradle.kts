@@ -75,6 +75,8 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.ui)
+    // Experimental one-press TiviMate tuning over the box's own ADB.
+    implementation(libs.dadb)
 
     testImplementation(libs.junit)
 }
