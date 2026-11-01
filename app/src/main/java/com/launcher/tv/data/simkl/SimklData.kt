@@ -185,9 +185,8 @@ object SimklData {
             .take(limit)
             .mapNotNull { s ->
                 val (season, episode) = episodeCode(s.nextToWatch) ?: return@mapNotNull null
-                val code = if (season != null) "S%02dE%02d".format(season, episode) else "Episode $episode"
                 base(s, MediaKind.EPISODE, "upnext").copy(
-                    subtitle = if (s.nextTitle.isNullOrBlank()) code else "$code · ${s.nextTitle}",
+                    subtitle = episodeLine(season, episode, s.nextTitle),
                     timeMillis = parseTime(s.nextAired),
                     season = season,
                     episode = episode,
@@ -215,11 +214,11 @@ object SimklData {
         return airings.filter { it.atMillis in from..to }
             .mapNotNull { a ->
                 val s = shows[a.simkl] ?: return@mapNotNull null
-                val code = if (a.season != null) "S%02dE%02d".format(a.season, a.episode) else "Episode ${a.episode}"
                 base(s, MediaKind.EPISODE, "cal").copy(
                     id = "cal-simkl-${a.simkl}-${a.season ?: 0}-${a.episode}",
-                    subtitle = if (a.title.isNullOrBlank()) code else "$code · ${a.title}",
-                    imageUrl = a.fanart?.let(::fanartUrl) ?: posterUrl(s.poster, wide = true),
+                    subtitle = episodeLine(a.season, a.episode, a.title),
+                    imageUrl = a.fanart?.let(::fanartUrl) ?: posterUrl(s.poster ?: a.poster, wide = true),
+                    posterUrl = posterUrl(s.poster ?: a.poster, wide = false),
                     timeMillis = a.atMillis,
                     season = a.season,
                     episode = a.episode,
@@ -245,6 +244,15 @@ object SimklData {
     )
 
     // ---------- helpers ----------
+
+    private val placeholderTitle = Regex("(?i)^(episode|ep\\.?)\\s*\\d+$")
+
+    /** "S02E04 · Title", or "Episode 12" for anime; placeholder titles like "Episode 35" are left out. */
+    fun episodeLine(season: Int?, episode: Int, title: String?): String {
+        val code = if (season != null) "S%02dE%02d".format(season, episode) else "Episode $episode"
+        val t = title?.trim()
+        return if (t.isNullOrEmpty() || placeholderTitle.matches(t)) code else "$code · $t"
+    }
 
     /** "S02E04" -> (2, 4); "E12" -> (null, 12). */
     fun episodeCode(code: String?): Pair<Int?, Int>? {

@@ -84,6 +84,10 @@ data class HomeUiState(
     val simklKey: Boolean = false,
     /** Title of what's playing in the picture-in-picture window, if anything. */
     val pip: String? = null,
+    /** Stremio and Nuvio, if installed. */
+    val watchApps: List<com.launcher.tv.player.WatchApp> = emptyList(),
+    /** Where Play sends next episodes and watchlist movies: "homebase", "stremio" or "nuvio". */
+    val watchApp: String = com.launcher.tv.player.WatchApps.HOMEBASE,
     /** How many teams are followed (Quick settings tile). */
     val teamsCount: Int = 0,
     val phone: PhoneInfo = PhoneInfo(enabled = true, running = false, address = null, loginLink = null, pin = ""),
@@ -218,6 +222,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 tiviMateTuning = com.launcher.tv.player.TiviMateTuner.enabled(app),
                 layout = app.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).getString("layout", "rows") ?: "rows",
                 sleepMinutes = SleepTimer.minutesLeft(app),
+                watchApp = com.launcher.tv.player.WatchApps.preferred(app),
             )
         }
     }
@@ -380,7 +385,29 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
     fun closePicker() = _state.update { it.copy(picker = null) }
 
+    /** Play: in Stremio or Nuvio if you chose one in Settings, otherwise from your providers. */
     fun playMedia(item: MediaItem) {
+        val chosen = com.launcher.tv.player.WatchApps.preferredApp(getApplication())
+        if (chosen != null) watchIn(item, chosen) else playHere(item)
+    }
+
+    /** In Stremio or Nuvio, on its list of streams for the movie or episode. */
+    fun watchIn(item: MediaItem, app: com.launcher.tv.player.WatchApp) {
+        viewModelScope.launch {
+            _state.update { it.copy(busy = "Opening ${item.title} in ${app.label}…") }
+            val msg = com.launcher.tv.player.WatchApps.open(getApplication(), app, item)
+            _state.update { it.copy(busy = null, message = msg) }
+        }
+    }
+
+    fun setWatchApp(key: String) {
+        val app = getApplication<Application>()
+        com.launcher.tv.player.WatchApps.setPreferred(app, key)
+        _state.update { it.copy(watchApp = com.launcher.tv.player.WatchApps.preferred(app)) }
+    }
+
+    /** From your IPTV providers in HomeBase's player (or TiviMate). */
+    fun playHere(item: MediaItem) {
         viewModelScope.launch {
             _state.update { it.copy(busy = "Finding ${item.title}…") }
             val result = Watch.media(getApplication(), item)
@@ -553,7 +580,16 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun reloadApps() {
-        viewModelScope.launch { _state.update { it.copy(apps = apps.loadApps()) } }
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    apps = apps.loadApps(),
+                    watchApps = com.launcher.tv.player.WatchApps.installed(app),
+                    watchApp = com.launcher.tv.player.WatchApps.preferred(app),
+                )
+            }
+        }
     }
 
     fun connectTrakt() {

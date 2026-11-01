@@ -55,6 +55,12 @@ class HomeActions(
     /** The picture-in-picture window: back to full screen, or stop it. */
     val pipFullScreen: () -> Unit = {},
     val pipStop: () -> Unit = {},
+    /** Stremio / Nuvio: open the movie or episode there; [playHere] uses your providers regardless. */
+    val watchIn: (com.launcher.tv.data.MediaItem, com.launcher.tv.player.WatchApp) -> Unit = { _, _ -> },
+    val playHere: (com.launcher.tv.data.MediaItem) -> Unit = {},
+    val watchApps: List<com.launcher.tv.player.WatchApp> = emptyList(),
+    /** The app chosen in Settings for movies and shows, if installed. */
+    val preferredApp: com.launcher.tv.player.WatchApp? = null,
     /** IPTV login saved: Watch/Play go straight to the stream. */
     val iptv: Boolean = false,
 )
@@ -227,14 +233,22 @@ fun HeroContent(tile: Tile, actions: HomeActions, modifier: Modifier = Modifier,
                 Title(tile.title)
                 Meta(listOf(i.subtitle).filter { it.isNotBlank() })
                 Buttons {
+                    val chosen = actions.preferredApp
                     when {
                         tile.role == Tile.Role.UPCOMING -> PillButton("Open TiviMate", actions.openTiviMate, primary = true, icon = R.drawable.ic_play)
+                        chosen != null -> {
+                            PillButton("Play in ${chosen.label}", { actions.watchIn(i, chosen) }, primary = true, icon = R.drawable.ic_play)
+                            if (actions.iptv) PillButton("Your provider", { actions.playHere(i) })
+                        }
                         actions.iptv -> {
                             val label = if (i.season != null && i.episode != null) "Play S%02dE%02d".format(i.season, i.episode) else "Play"
                             PillButton(label, { actions.playMedia(i) }, primary = true, icon = R.drawable.ic_play)
                             PillButton("TiviMate", actions.openTiviMate)
                         }
                         else -> PillButton("Watch in TiviMate", actions.openTiviMate, primary = true, icon = R.drawable.ic_play)
+                    }
+                    if (tile.role != Tile.Role.UPCOMING) actions.watchApps.filter { it != chosen }.forEach { app ->
+                        PillButton(app.label, { actions.watchIn(i, app) })
                     }
                     if (i.simklUrl != null) PillButton("Simkl", { actions.simklPage(i) })
                 }

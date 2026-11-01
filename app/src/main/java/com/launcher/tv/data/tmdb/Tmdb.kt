@@ -15,7 +15,7 @@ object Tmdb {
 
     enum class Type(val path: String) { TV("tv"), MOVIE("movie") }
 
-    private data class Art(val poster: String?, val backdrop: String?, val overview: String?)
+    private data class Art(val poster: String?, val backdrop: String?, val overview: String?, val imdb: String? = null)
 
     private val cache = ConcurrentHashMap<String, Art>()
     private const val IMG = "https://image.tmdb.org/t/p"
@@ -29,14 +29,18 @@ object Tmdb {
     /** Short description for the preview area. */
     suspend fun overview(type: Type, tmdbId: Long?): String? = art(type, tmdbId)?.overview
 
+    /** The IMDb id (Stremio and Nuvio find titles by it). */
+    suspend fun imdbId(type: Type, tmdbId: Long?): String? = art(type, tmdbId)?.imdb
+
     private suspend fun art(type: Type, tmdbId: Long?): Art? {
         val key = apiKey
         if (key.isBlank() || tmdbId == null) return null
         val cacheKey = "${type.path}/$tmdbId"
         cache[cacheKey]?.let { return it }
         return runCatching {
-            val o = Http.getJson("https://api.themoviedb.org/3/${type.path}/$tmdbId?api_key=$key").obj()
-            Art(o?.str("poster_path"), o?.str("backdrop_path"), o?.str("overview"))
+            val o = Http.getJson("https://api.themoviedb.org/3/${type.path}/$tmdbId?api_key=$key&append_to_response=external_ids").obj()
+            // Movies carry imdb_id themselves; shows only in external_ids.
+            Art(o?.str("poster_path"), o?.str("backdrop_path"), o?.str("overview"), o?.str("imdb_id") ?: o?.obj("external_ids")?.str("imdb_id"))
         }.getOrNull()?.also { cache[cacheKey] = it }
     }
 }

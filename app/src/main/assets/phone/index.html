@@ -126,6 +126,9 @@
   <section id="tab-settings">
     <h2>On the TV</h2>
     <div class="card" id="settings"></div>
+    <label for="watchApp">Movies and shows open in</label>
+    <select id="watchApp"></select>
+    <p class="muted" id="watchAppHint"></p>
     <label for="layout">Home screen layout</label>
     <select id="layout"><option value="rows">Rows (streaming-app style)</option><option value="tiles">Tiles (console style)</option></select>
     <label for="sleep">Sleep timer</label>
@@ -264,6 +267,10 @@ function render() {
     toggleRow("One-press TiviMate tuning", "Experimental, uses network debugging", s.tivimateTuning, set("tivimateTuning")),
   );
   $("#layout").value = s.layout;
+  const wa = $("#watchApp"), apps = state.watchApps || [];
+  wa.replaceChildren(el("option", { value: "homebase", text: "HomeBase (your providers)" }), ...apps.map((a) => el("option", { value: a.key, text: a.label })));
+  wa.value = apps.some((a) => a.key === s.watchApp) ? s.watchApp : "homebase";
+  $("#watchAppHint").textContent = apps.length ? "Stremio and Nuvio open on the list of streams from your add-ons." : "Install Stremio or Nuvio on the TV to play movies and shows there.";
   const k = state.keys || {};
   $("#keyStatus").textContent = "Trakt: " + (k.trakt ? "set" : "not set") + "  ·  Simkl: " + (k.simkl ? "set" : "not set") + "  ·  TMDB: " + (k.tmdb ? "set" : "not set");
   const sl = $("#sleep");
@@ -278,6 +285,7 @@ function toggleRow(title, sub, on, onChange) {
 }
 
 $("#games").onchange = (e) => run(null, async () => { state = await api("/api/games-per-team", { n: Number(e.target.value) }); toast("Saved"); });
+$("#watchApp").onchange = (e) => run(null, async () => { state = await api("/api/settings", { key: "watchApp", value: e.target.value }); toast("Saved"); });
 $("#layout").onchange = (e) => run(null, async () => { state = await api("/api/settings", { key: "layout", value: e.target.value }); toast("Layout changed on the TV"); });
 $("#sleep").onchange = (e) => run(null, async () => { state = await api("/api/sleep", { minutes: Number(e.target.value) }); toast(Number(e.target.value) ? "Sleep timer set" : "Sleep timer off"); });
 
@@ -342,6 +350,7 @@ async function search() {
       el("div", { class: "actions" },
         el("button", { class: "btn small primary", text: x.kind === "game" ? (x.finished ? "Watch full game" : "Watch on TV") : x.kind === "channel" ? "Watch on TV" : "Play on TV", onclick: (e) => play(e.target, x.ref, "watch") }),
         el("button", { class: "btn small", text: "TiviMate", onclick: (e) => play(e.target, x.ref, "tivimate") }),
+        ...((x.kind === "show" || x.kind === "movie") ? (state.watchApps || []).map((a) => el("button", { class: "btn small", text: a.label, onclick: (e) => play(e.target, x.ref, a.key) })) : []),
         x.simklUrl && x.simklUrl.startsWith("https://simkl.com/") ? el("a", { class: "btn small link", href: x.simklUrl, target: "_blank", rel: "noopener", text: "Simkl page" }) : null))));
   } catch (e) { toast(e.message); }
 }

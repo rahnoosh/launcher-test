@@ -141,6 +141,20 @@ After that:
   provider's catalogue and plays it. Playback is scrobbled to Trakt with exact IDs.
 - Channel lists and catalogues download once a day in the background.
 
+## 7a. Stremio and Nuvio
+
+If **Stremio** or **Nuvio** is installed on the box, next episodes and watchlist movies can play there instead
+of from your IPTV providers:
+
+- Each movie or show gets **Stremio** and **Nuvio** buttons (in the Rows layout: hold OK).
+- To make one the default for Play and OK, go to Quick settings → HomeBase → **Movies and shows**, or use the
+  phone page's Settings. *Your provider* still plays it the HomeBase way.
+- HomeBase opens the app on that movie's or episode's **list of streams**, so you choose a source there.
+  Streams come from whatever add-ons you've installed in Stremio or Nuvio; HomeBase only hands over the title.
+- Titles are found by their IMDb id, which comes from Trakt or Simkl, or from TMDB if you've added a TMDB key.
+- Anime from Simkl without season numbers opens on the show's page.
+- The phone page's search has the same buttons for movies and shows.
+
 ## 8. Game pages, results and highlights
 
 - **Game details** on any game opens its page:

@@ -102,7 +102,7 @@ fun RowsLayout(
     val listState = rememberLazyListState()
     val firstCard = remember { FocusRequester() }
 
-    val actions = remember(callbacks, state.iptv) {
+    val actions = remember(callbacks, state.iptv, state.watchApps, state.watchApp) {
         HomeActions(
             openTiviMate = { callbacks.launchPackage(AppsRepository.TIVIMATE) },
             play = callbacks.play,
@@ -116,6 +116,10 @@ fun RowsLayout(
             simklPage = { overlays.simklLink = it },
             pipFullScreen = callbacks.pipFullScreen,
             pipStop = callbacks.pipStop,
+            playHere = callbacks.playHere,
+            watchIn = callbacks.watchIn,
+            watchApps = state.watchApps,
+            preferredApp = state.watchApps.firstOrNull { it.key == state.watchApp },
             openGame = callbacks.openGame,
             highlights = callbacks.highlights,
             revealScore = callbacks.revealScore,
@@ -239,7 +243,14 @@ private fun Billboard(tile: Tile, state: HomeUiState, modifier: Modifier) {
                 Title(tile.title)
                 Meta(listOfNotNull(i.subtitle.ifBlank { null }, i.year?.toString()))
                 i.overview?.let { Overview(it) }
-                Hint(if (tile.role == Tile.Role.UPCOMING) "OK  Open TiviMate" else "OK  Play   ·   Hold OK  More")
+                val chosen = state.watchApps.firstOrNull { it.key == state.watchApp }
+                Hint(
+                    when {
+                        tile.role == Tile.Role.UPCOMING -> "OK  Open TiviMate"
+                        chosen != null -> "OK  Play in ${chosen.label}   ·   Hold OK  More"
+                        else -> "OK  Play   ·   Hold OK  More"
+                    }
+                )
             }
             is Tile.Game -> {
                 val e = tile.event
@@ -556,7 +567,12 @@ private fun OptionsSheet(tile: Tile, actions: HomeActions, onDismiss: () -> Unit
                         PillButton("Remove from Continue Watching", go { actions.removeHistory(tile.entry) })
                     }
                     is Tile.Media -> {
-                        if (tile.role != Tile.Role.UPCOMING) PillButton("Play", go { actions.playMedia(tile.item) }, primary = true, icon = R.drawable.ic_play)
+                        val chosen = actions.preferredApp
+                        if (tile.role != Tile.Role.UPCOMING) {
+                            PillButton(chosen?.let { "Play in ${it.label}" } ?: "Play", go { actions.playMedia(tile.item) }, primary = true, icon = R.drawable.ic_play)
+                            actions.watchApps.filter { it != chosen }.forEach { app -> PillButton("Watch in ${app.label}", go { actions.watchIn(tile.item, app) }) }
+                            if (chosen != null && actions.iptv) PillButton("Play from your provider", go { actions.playHere(tile.item) })
+                        }
                         PillButton("Open TiviMate", go(actions.openTiviMate))
                         if (tile.item.simklUrl != null) PillButton("View on Simkl", go { actions.simklPage(tile.item) })
                     }

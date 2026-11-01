@@ -188,6 +188,10 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
                 EventFollow.entries.forEach { e -> addJsonObject { put("key", e.key); put("label", e.label); put("on", follow.follows(e)) } }
             }
             put("gamesPerTeam", follow.gamesPerTeam)
+            // Stremio / Nuvio, if installed: buttons on movie and show results.
+            putJsonArray("watchApps") {
+                com.launcher.tv.player.WatchApps.installed(app).forEach { w -> addJsonObject { put("key", w.key); put("label", w.label) } }
+            }
             putJsonArray("leagues") { Leagues.all.forEach { l -> addJsonObject { put("key", l.key); put("label", l.label) } } }
             putJsonArray("providers") {
                 library.configs().forEach { c ->
@@ -200,6 +204,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
                 put("scoringAlerts", AlertSettings.scoring(app))
                 put("tivimateTuning", TiviMateTuner.enabled(app))
                 put("layout", layout())
+                put("watchApp", com.launcher.tv.player.WatchApps.preferred(app))
                 put("sleepMinutes", SleepTimer.minutesLeft(app))
             }
         }
@@ -234,6 +239,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
             "tivimateTuning" -> TiviMateTuner.setEnabled(app, value.bool() ?: false)
             "layout" -> app.getSharedPreferences("ui", Context.MODE_PRIVATE).edit()
                 .putString("layout", if (value.string() == "tiles") "tiles" else "rows").apply()
+            "watchApp" -> com.launcher.tv.player.WatchApps.setPreferred(app, value.string() ?: com.launcher.tv.player.WatchApps.HOMEBASE)
             else -> throw IllegalArgumentException("Unknown setting $key")
         }
     }
@@ -327,13 +333,20 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
                     is Watch.Result.Unavailable -> r.why
                     is Watch.Result.Choose -> "Choose a channel on the TV"
                 }
-                is MediaItem -> if (tivimate) {
-                    AppsRepository(app).launch(AppsRepository.TIVIMATE); "Opened TiviMate"
-                } else when (val r = Watch.media(app, o)) {
-                    is Watch.Result.Playing -> "Playing on the TV: ${r.what}"
-                    is Watch.Result.OpenedTiviMate -> r.why ?: "Opened TiviMate"
-                    is Watch.Result.Unavailable -> r.why
-                    is Watch.Result.Choose -> "Choose on the TV"
+                is MediaItem -> {
+                    // "stremio"/"nuvio" buttons, or Play with Stremio/Nuvio chosen in Settings.
+                    val inApp = com.launcher.tv.player.WatchApp.byKey(action)
+                        ?: if (action == "watch") com.launcher.tv.player.WatchApps.preferredApp(app) else null
+                    when {
+                        tivimate -> { AppsRepository(app).launch(AppsRepository.TIVIMATE); "Opened TiviMate" }
+                        inApp != null -> com.launcher.tv.player.WatchApps.open(app, inApp, o) ?: "Opening ${o.title} in ${inApp.label} on the TV"
+                        else -> when (val r = Watch.media(app, o)) {
+                            is Watch.Result.Playing -> "Playing on the TV: ${r.what}"
+                            is Watch.Result.OpenedTiviMate -> r.why ?: "Opened TiviMate"
+                            is Watch.Result.Unavailable -> r.why
+                            is Watch.Result.Choose -> "Choose on the TV"
+                        }
+                    }
                 }
                 is IptvChannel -> if (tivimate) {
                     TiviMateHelper.openOrTune(app, null, o, providers[o.sourceId] ?: "Provider"); "Opening TiviMate on ${o.name}"
@@ -369,6 +382,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
             put("scoringAlerts", AlertSettings.scoring(app))
             put("tivimateTuning", TiviMateTuner.enabled(app))
             put("layout", layout())
+            put("watchApp", com.launcher.tv.player.WatchApps.preferred(app))
         }
         putJsonObject("channelChoices") {
             app.getSharedPreferences("channel_choices", Context.MODE_PRIVATE).all.forEach { (k, v) -> if (v is String) put(k, v) }

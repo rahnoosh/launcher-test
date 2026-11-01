@@ -107,6 +107,9 @@ class HomeCallbacks(
     val openPicker: (SportsEvent) -> Unit = {},
     val closePicker: () -> Unit = {},
     val playMedia: (MediaItem) -> Unit = {},
+    val playHere: (MediaItem) -> Unit = {},
+    val watchIn: (MediaItem, com.launcher.tv.player.WatchApp) -> Unit = { _, _ -> },
+    val setWatchApp: (String) -> Unit = {},
     val addXtream: (String, String, String) -> Unit = { _, _, _ -> },
     val addM3u: (String, String) -> Unit = { _, _ -> },
     val removeSource: (String) -> Unit = {},
@@ -172,6 +175,9 @@ fun HomeScreen(vm: HomeViewModel) {
             openPicker = vm::openPicker,
             closePicker = { vm.closePicker() },
             playMedia = vm::playMedia,
+            playHere = vm::playHere,
+            watchIn = vm::watchIn,
+            setWatchApp = vm::setWatchApp,
             addXtream = vm::addXtream,
             addM3u = vm::addM3u,
             removeSource = vm::removeSource,
@@ -241,7 +247,7 @@ fun HomeLayout(
     val listState = rememberLazyListState()
     val firstTile = remember { FocusRequester() }
 
-    val actions = remember(callbacks, state.iptv) {
+    val actions = remember(callbacks, state.iptv, state.watchApps, state.watchApp) {
         HomeActions(
             openTiviMate = { callbacks.launchPackage(AppsRepository.TIVIMATE) },
             play = callbacks.play,
@@ -255,6 +261,10 @@ fun HomeLayout(
             simklPage = { overlays.simklLink = it },
             pipFullScreen = callbacks.pipFullScreen,
             pipStop = callbacks.pipStop,
+            playHere = callbacks.playHere,
+            watchIn = callbacks.watchIn,
+            watchApps = state.watchApps,
+            preferredApp = state.watchApps.firstOrNull { it.key == state.watchApp },
             openGame = callbacks.openGame,
             highlights = callbacks.highlights,
             revealScore = callbacks.revealScore,
@@ -621,6 +631,15 @@ private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXt
                     ?: "You have ${com.launcher.tv.BuildConfig.VERSION_NAME}",
             ) {
                 PillButton(if (state.update.available != null) "Install update" else "Check for updates", callbacks.updateAction)
+            }
+            SettingsSection(
+                "Movies and shows",
+                if (state.watchApps.isEmpty()) "Play uses your providers in HomeBase's player, or TiviMate. Install Stremio or Nuvio to play them there instead."
+                else "Where Play sends next episodes and watchlist movies. Stremio and Nuvio open on the list of streams from your add-ons.",
+            ) {
+                val chosen = state.watchApps.firstOrNull { it.key == state.watchApp }
+                PillButton("HomeBase", { callbacks.setWatchApp(com.launcher.tv.player.WatchApps.HOMEBASE) }, primary = chosen == null)
+                state.watchApps.forEach { app -> PillButton(app.label, { callbacks.setWatchApp(app.key) }, primary = chosen == app) }
             }
             SettingsSection("Home screen layout", "Rows: preview on top, rows of cards below. Tiles: console-style tile row.") {
                 PillButton("Rows", { callbacks.setLayout("rows") }, primary = state.layout != "tiles")

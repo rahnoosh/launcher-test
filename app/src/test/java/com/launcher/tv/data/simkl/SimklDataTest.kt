@@ -171,6 +171,14 @@ class SimklDataTest {
     }
 
     @Test
+    fun placeholderEpisodeTitlesAreLeftOut() {
+        assertEquals("S01E35", SimklData.episodeLine(1, 35, "Episode 35"))
+        assertEquals("Episode 224", SimklData.episodeLine(null, 224, "Episode 224"))
+        assertEquals("S02E04 · Woe's Hollow", SimklData.episodeLine(2, 4, "Woe's Hollow"))
+        assertEquals("S02E04", SimklData.episodeLine(2, 4, " "))
+    }
+
+    @Test
     fun episodeCodes() {
         assertEquals(2 to 4, SimklData.episodeCode("S02E04"))
         assertEquals(null to 12, SimklData.episodeCode("E12"))
