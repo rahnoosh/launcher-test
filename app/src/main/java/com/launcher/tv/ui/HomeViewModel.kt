@@ -84,6 +84,8 @@ data class HomeUiState(
     val simklKey: Boolean = false,
     /** Title of what's playing in the picture-in-picture window, if anything. */
     val pip: String? = null,
+    /** Weather and today's sunrise/sunset (Aura's status pill and sky). */
+    val weather: com.launcher.tv.data.sky.Weather.Now? = null,
     /** Stremio and Nuvio, if installed. */
     val watchApps: List<com.launcher.tv.player.WatchApp> = emptyList(),
     /** Where Play sends next episodes and watchlist movies: "homebase", "stremio" or "nuvio". */
@@ -92,8 +94,8 @@ data class HomeUiState(
     val teamsCount: Int = 0,
     val phone: PhoneInfo = PhoneInfo(enabled = true, running = false, address = null, loginLink = null, pin = ""),
     val update: com.launcher.tv.update.UpdateManager.State = com.launcher.tv.update.UpdateManager.State(),
-    /** "rows" (streaming-app style, default) or "tiles" (console style). */
-    val layout: String = "rows",
+    /** "aura" (glass over a photograph, default), "rows" (streaming-app style) or "tiles" (console style). */
+    val layout: String = "aura",
     /** Experimental: type the channel number into TiviMate over local ADB. */
     val tiviMateTuning: Boolean = false,
     /** "Best stream" dialog for an event. */
@@ -126,7 +128,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             scoringAlerts = AlertSettings.scoring(app),
             spoilers = com.launcher.tv.data.Spoilers.enabled(app),
             tiviMateTuning = com.launcher.tv.player.TiviMateTuner.enabled(app),
-            layout = app.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).getString("layout", "rows") ?: "rows",
+            layout = auraOnce(app),
             revealed = com.launcher.tv.data.Spoilers.revealed(app),
         )
     )
@@ -185,7 +187,15 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             com.launcher.tv.update.UpdateManager.check()
         }
         _state.update { it.copy(teamsCount = com.launcher.tv.data.sports.FollowStore.load(app).teams.size, keys = keyStatus(), simklKey = simklClient.isConfigured) }
+        loadWeather()
         refreshPhone()
+    }
+
+    private fun loadWeather() {
+        viewModelScope.launch {
+            val w = com.launcher.tv.data.sky.Weather.current(getApplication())
+            if (w != null) _state.update { it.copy(weather = w) }
+        }
     }
 
     private fun keyStatus(): Pair<Boolean, Boolean> {
@@ -220,7 +230,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 alerts = AlertSettings.enabled(app),
                 scoringAlerts = AlertSettings.scoring(app),
                 tiviMateTuning = com.launcher.tv.player.TiviMateTuner.enabled(app),
-                layout = app.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).getString("layout", "rows") ?: "rows",
+                layout = app.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).getString("layout", "aura") ?: "aura",
                 sleepMinutes = SleepTimer.minutesLeft(app),
                 watchApp = com.launcher.tv.player.WatchApps.preferred(app),
             )
@@ -511,6 +521,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     fun onResume() {
         refresh(force = false)
         syncSimkl()
+        loadWeather()
         reloadApps()
         refreshSystemState()
         refreshPhone()
@@ -683,4 +694,11 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         traktClient.isSignedIn -> TraktState.SignedIn
         else -> TraktState.SignedOut
     }
+}
+
+/** The Aura look is the new default: switch to it once, after which the choice in Settings sticks. */
+private fun auraOnce(app: Application): String {
+    val prefs = app.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE)
+    if (!prefs.getBoolean("aura_intro", false)) prefs.edit().putString("layout", "aura").putBoolean("aura_intro", true).apply()
+    return prefs.getString("layout", "aura") ?: "aura"
 }

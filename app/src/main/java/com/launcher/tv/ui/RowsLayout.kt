@@ -221,91 +221,15 @@ fun RowsLayout(
 
 @Composable
 private fun Billboard(tile: Tile, state: HomeUiState, modifier: Modifier) {
+    val b = billboardInfo(tile, state)
     Column(modifier.widthIn(max = 520.dp)) {
-        when (tile) {
-            is Tile.Resume -> {
-                val e = tile.entry
-                Eyebrow("Continue watching")
-                Title(tile.title)
-                Meta(listOfNotNull(e.subtitle.ifBlank { null }, if (e.progress > 0.01f) "${(e.progress * 100).toInt()}% watched" else null))
-                if (e.durationMs > 0) Box(Modifier.padding(top = 10.dp).width(220.dp)) { ProgressBar(e.progress) }
-                Hint("OK  Resume   ·   Hold OK  More")
-            }
-            is Tile.Media -> {
-                val i = tile.item
-                Eyebrow(
-                    when (tile.role) {
-                        Tile.Role.UP_NEXT -> if (tile.isNew) "New episode · next up" else "Next up · ${i.trackerLabel()}"
-                        Tile.Role.UPCOMING -> "New episode · ${i.timeMillis?.let(::friendlyTime) ?: "soon"}"
-                        Tile.Role.WATCHLIST -> "My watchlist"
-                    }
-                )
-                Title(tile.title)
-                Meta(listOfNotNull(i.subtitle.ifBlank { null }, i.year?.toString()))
-                i.overview?.let { Overview(it) }
-                val chosen = state.watchApps.firstOrNull { it.key == state.watchApp }
-                Hint(
-                    when {
-                        tile.role == Tile.Role.UPCOMING -> "OK  Open TiviMate"
-                        chosen != null -> "OK  Play in ${chosen.label}   ·   Hold OK  More"
-                        else -> "OK  Play   ·   Hold OK  More"
-                    }
-                )
-            }
-            is Tile.Game -> {
-                val e = tile.event
-                Eyebrow(gameEyebrow(e), live = e.live)
-                if (e.home != null && e.away != null) Scoreboard(e) else Title(e.title)
-                val channel = state.channels[e.id]?.candidates?.firstOrNull()?.channel?.name
-                Meta(
-                    listOfNotNull(
-                        when {
-                            e.finished -> "Final"
-                            e.live -> (if (e.home != null) Spoilers.stripScore(e.status) else e.status) ?: "Live"
-                            else -> friendlyTime(e.startMillis)
-                        },
-                        if (state.iptv && channel != null && !e.finished) "on $channel" else e.venue,
-                    )
-                )
-                Hint(
-                    when {
-                        e.finished && state.iptv && com.launcher.tv.player.Replay.offered(e, System.currentTimeMillis()) ->
-                            "OK  Highlights   ·   Hold OK  Game page, full game"
-                        e.finished -> "OK  Highlights   ·   Hold OK  Game page"
-                        state.iptv -> "OK  Watch   ·   Hold OK  Game page, best stream, start over"
-                        else -> "OK  Open TiviMate   ·   Hold OK  Game page"
-                    }
-                )
-            }
-            is Tile.App -> {
-                Eyebrow("App")
-                Title(tile.title)
-                Hint("OK  Open")
-            }
-            Tile.AllApps -> { Eyebrow("Apps"); Title("All apps") }
-            Tile.EditTeams -> {
-                Eyebrow("Sports")
-                Title("Your teams")
-                Overview("Add or remove teams from the NFL, college football, NBA, WNBA, college basketball, MLB, NHL, MLS, Premier League, Champions League and LaLiga, plus fights, F1, golf majors and tennis Grand Slams.")
-                Hint("OK  Edit teams")
-            }
-            Tile.ConnectTrakt -> {
-                Eyebrow("Trakt · Simkl")
-                Title("Connect Trakt or Simkl")
-                Overview("See your next episodes, new episodes and movie watchlist. Use either service, or both.")
-                Hint("OK  Connect")
-            }
-            is Tile.NowPlaying -> {
-                Eyebrow("Playing in a window")
-                Title(tile.title)
-                Overview("It keeps playing in the corner while you browse.")
-                Hint("OK  Full screen   ·   Hold OK  Stop")
-            }
-            is Tile.Message -> {
-                Title(tile.title)
-                if (tile.subtitle.isNotBlank()) Meta(listOf(tile.subtitle))
-            }
-        }
+        b.eyebrow?.let { Eyebrow(it, live = b.live) }
+        val g = b.game
+        if (g != null) Scoreboard(g) else Title(b.title)
+        Meta(b.meta)
+        b.progress?.let { Box(Modifier.padding(top = 10.dp).width(220.dp)) { ProgressBar(it) } }
+        b.overview?.let { Overview(it) }
+        b.hint?.let { Hint(it) }
     }
 }
 
@@ -554,7 +478,7 @@ private fun RailItem(icon: Int, label: String, selected: Boolean, expanded: Bool
 // ---------------- more options (hold OK) ----------------
 
 @Composable
-private fun OptionsSheet(tile: Tile, actions: HomeActions, onDismiss: () -> Unit) {
+internal fun OptionsSheet(tile: Tile, actions: HomeActions, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Column(Modifier.background(Color(0xFF1C1C20), RoundedCornerShape(16.dp)).padding(24.dp)) {
             Text(tile.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)

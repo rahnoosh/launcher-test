@@ -74,6 +74,34 @@ class HomeScreenshotTest {
         }
     }
 
+    // ---- Aura layout (glass over a photograph; a painted sky here, since tests have no internet) ----
+    @Test fun auraHome() = aura(HomeTab.FOR_YOU, null)
+    @Test fun auraLiveGame() = aura(HomeTab.FOR_YOU, "g-espn-lal")
+    @Test fun auraSports() = aura(HomeTab.SPORTS, "g-espn-ne")
+    @Test fun auraNight() = aura(HomeTab.TV, null, phase = SkyPhase.NIGHT, hour = 23)
+    @Test fun auraControlCenter() = aura(HomeTab.FOR_YOU, null, quick = true)
+
+    private fun aura(tab: HomeTab, selected: String?, quick: Boolean = false, phase: SkyPhase = SkyPhase.DUSK, hour: Int = 18) {
+        val zone = java.time.ZoneId.systemDefault()
+        val day = java.time.LocalDate.of(2026, 10, 31)
+        val at = day.atTime(hour, 5).atZone(zone).toInstant().toEpochMilli()
+        val weather = com.launcher.tv.data.sky.Weather.Now(
+            tempC = 18.0, code = 2, isDay = hour in 7..17,
+            sunrise = day.atTime(6, 36).atZone(zone).toInstant().toEpochMilli(),
+            sunset = day.atTime(17, 46).atZone(zone).toInstant().toEpochMilli(),
+            city = "Tuscaloosa",
+        )
+        val state = sampleState().copy(layout = "aura", weather = weather, teamsCount = 4)
+        paparazzi.snapshot {
+            HomeBaseTheme {
+                AuraLayout(
+                    state, HomeCallbacks(), initialTab = tab, initialSelectedKey = selected, initialQuickSettings = quick,
+                    sky = buildSky(null, phase, null), now = at,
+                )
+            }
+        }
+    }
+
     // ---- Tiles layout ----
     @Test fun forYou() = snap(HomeTab.FOR_YOU, null)
     @Test fun forYouLiveGame() = snap(HomeTab.FOR_YOU, "g-espn-lal")

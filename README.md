@@ -234,14 +234,32 @@ Player.
 
 ## Home screen layouts
 
-**Rows** (the default) looks like a streaming app: a menu on the left (Home, TV & Movies, Sports, Apps, Refresh,
-Quick settings), a large preview of the selected item with its description on top, and rows of wide cards below:
-Continue Watching, Live Now, Next Up, Your Teams, Recent Results, New Episodes, Fight Night, NFL This Week,
-Formula 1, My Watchlist and Apps. **OK** plays or watches. **Hold OK** opens more options; for a game, that's its
-game page, with Best stream, Start over, Channels and Show score.
+**Aura** (the default) is a calmer look, after [Aura](https://github.com/cookedzera/aura-tv) (MIT):
 
-**Tiles** is the console-style layout with a row of square tiles. Switch layouts in Quick settings → HomeBase →
-Home screen layout.
+- **Background:** frosted glass over a full-screen photograph, Bing's photo of the day, credited in the corner.
+  Its light follows the sun: night sky after dark, golden at dusk.
+- **Header:** a greeting and the date at the top. A status pill shows how many of your games are live, the
+  weather and the time.
+- **Sidebar:** a slim glass bar on the left with Home, TV & Movies, Sports, Apps, Refresh, Control Center,
+  Settings and Accounts.
+- **Large card:** shows whatever you're on, with its artwork fading in from the right. For a game, the crests
+  and the score.
+- **Rows:** the same rows as before, as glass cards: Continue Watching, Live Now, Next Up, Your Teams and so on.
+  **OK** plays or watches; **Hold OK** opens more options. For a game, that's its game page.
+- **Control Center** (Quick settings): the time in large type, what's on tonight, and glass tiles. The tiles
+  are Wi-Fi, Bluetooth, the sleep timer, spoiler mode, your teams, the sky (sunrise, sunset and weather),
+  picture, sound, the screensaver, the phone page, updates, HomeBase and Android settings, and Accounts.
+
+The weather and today's sunrise and sunset come from Open-Meteo, using your approximate location from your IP
+address (GeoJS). Neither needs a key. Without internet, HomeBase paints the sky instead of using a photo.
+The typeface is Inter (SIL Open Font License; the licence is in the app's assets).
+
+**Rows** looks like a streaming app: a menu on the left, a large preview of the selected item on top, and rows
+of wide cards below.
+
+**Tiles** is the console-style layout with a row of square tiles.
+
+Switch layouts in Settings → Home screen layout, or on the phone page.
 
 ## Your teams (on the TV)
 

@@ -53,6 +53,14 @@ object Http {
                 .build()
         )
 
+    /** Raw bytes (images). */
+    suspend fun getBytes(url: String, headers: Map<String, String> = emptyMap()): ByteArray = withContext(Dispatchers.IO) {
+        client.newCall(Request.Builder().url(url).apply { headers.forEach { (k, v) -> header(k, v) } }.get().build()).execute().use { resp ->
+            if (!resp.isSuccessful) throw HttpException(resp.code, "")
+            resp.body?.bytes() ?: ByteArray(0)
+        }
+    }
+
     suspend fun getJson(url: String, headers: Map<String, String> = emptyMap()): JsonElement =
         json.parseToJsonElement(get(url, headers))
 

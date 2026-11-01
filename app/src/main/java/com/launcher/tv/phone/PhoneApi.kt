@@ -229,7 +229,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
         put("followed", followed)
     }
 
-    private fun layout() = app.getSharedPreferences("ui", Context.MODE_PRIVATE).getString("layout", "rows") ?: "rows"
+    private fun layout() = app.getSharedPreferences("ui", Context.MODE_PRIVATE).getString("layout", "aura") ?: "aura"
 
     private fun applySetting(key: String, value: JsonElement?) {
         when (key) {
@@ -238,7 +238,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
             "scoringAlerts" -> AlertSettings.setScoring(app, value.bool() ?: true)
             "tivimateTuning" -> TiviMateTuner.setEnabled(app, value.bool() ?: false)
             "layout" -> app.getSharedPreferences("ui", Context.MODE_PRIVATE).edit()
-                .putString("layout", if (value.string() == "tiles") "tiles" else "rows").apply()
+                .putString("layout", value.string()?.takeIf { it in setOf("aura", "rows", "tiles") } ?: "aura").apply()
             "watchApp" -> com.launcher.tv.player.WatchApps.setPreferred(app, value.string() ?: com.launcher.tv.player.WatchApps.HOMEBASE)
             else -> throw IllegalArgumentException("Unknown setting $key")
         }

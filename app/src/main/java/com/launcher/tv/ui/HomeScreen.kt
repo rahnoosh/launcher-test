@@ -208,7 +208,11 @@ fun HomeScreen(vm: HomeViewModel) {
             saveKeys = vm::saveKeys,
         )
     }
-    if (state.layout == "tiles") HomeLayout(state, callbacks) else RowsLayout(state, callbacks)
+    when (state.layout) {
+        "tiles" -> HomeLayout(state, callbacks)
+        "rows" -> RowsLayout(state, callbacks)
+        else -> AuraLayout(state, callbacks)
+    }
 }
 
 /**
@@ -584,9 +588,30 @@ private fun LinkQrDialog(title: String, note: String, url: String, onDismiss: ()
     }
 }
 
+/** Inter (SIL Open Font License), the typeface Aura uses. */
+val Inter = androidx.compose.ui.text.font.FontFamily(
+    androidx.compose.ui.text.font.Font(com.launcher.tv.R.font.inter_light, FontWeight.Light),
+    androidx.compose.ui.text.font.Font(com.launcher.tv.R.font.inter_regular, FontWeight.Normal),
+    androidx.compose.ui.text.font.Font(com.launcher.tv.R.font.inter_medium, FontWeight.Medium),
+    androidx.compose.ui.text.font.Font(com.launcher.tv.R.font.inter_semibold, FontWeight.SemiBold),
+    androidx.compose.ui.text.font.Font(com.launcher.tv.R.font.inter_bold, FontWeight.Bold),
+    androidx.compose.ui.text.font.Font(com.launcher.tv.R.font.inter_extrabold, FontWeight.ExtraBold),
+)
+
+private val InterTypography = androidx.tv.material3.Typography().let { t ->
+    fun androidx.compose.ui.text.TextStyle.inter() = copy(fontFamily = Inter)
+    t.copy(
+        displayLarge = t.displayLarge.inter(), displayMedium = t.displayMedium.inter(), displaySmall = t.displaySmall.inter(),
+        headlineLarge = t.headlineLarge.inter(), headlineMedium = t.headlineMedium.inter(), headlineSmall = t.headlineSmall.inter(),
+        titleLarge = t.titleLarge.inter(), titleMedium = t.titleMedium.inter(), titleSmall = t.titleSmall.inter(),
+        bodyLarge = t.bodyLarge.inter(), bodyMedium = t.bodyMedium.inter(), bodySmall = t.bodySmall.inter(),
+        labelLarge = t.labelLarge.inter(), labelMedium = t.labelMedium.inter(), labelSmall = t.labelSmall.inter(),
+    )
+}
+
 @Composable
 fun HomeBaseTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = androidx.tv.material3.darkColorScheme(primary = Accent), content = content)
+    MaterialTheme(colorScheme = androidx.tv.material3.darkColorScheme(primary = Accent), typography = InterTypography, content = content)
 }
 
 @Composable
@@ -641,8 +666,9 @@ private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXt
                 PillButton("HomeBase", { callbacks.setWatchApp(com.launcher.tv.player.WatchApps.HOMEBASE) }, primary = chosen == null)
                 state.watchApps.forEach { app -> PillButton(app.label, { callbacks.setWatchApp(app.key) }, primary = chosen == app) }
             }
-            SettingsSection("Home screen layout", "Rows: preview on top, rows of cards below. Tiles: console-style tile row.") {
-                PillButton("Rows", { callbacks.setLayout("rows") }, primary = state.layout != "tiles")
+            SettingsSection("Home screen layout", "Aura: glass over a daily photograph. Rows: streaming-app style. Tiles: console style.") {
+                PillButton("Aura", { callbacks.setLayout("aura") }, primary = state.layout != "tiles" && state.layout != "rows")
+                PillButton("Rows", { callbacks.setLayout("rows") }, primary = state.layout == "rows")
                 PillButton("Tiles", { callbacks.setLayout("tiles") }, primary = state.layout == "tiles")
             }
             SettingsSection("Spoiler mode", "Hides scores of live and finished games until you choose Show score") {
@@ -830,7 +856,7 @@ class OverlayState(quick: Boolean = false) {
 
 /** Dialogs and panels on top of the home screen (both layouts). */
 @Composable
-fun BoxScope.HomeOverlays(state: HomeUiState, callbacks: HomeCallbacks, o: OverlayState) {
+fun BoxScope.HomeOverlays(state: HomeUiState, callbacks: HomeCallbacks, o: OverlayState, aura: Boolean = false) {
     val context = LocalContext.current
     (state.trakt as? TraktState.AwaitingCode)?.let { TraktCodeDialog(it, callbacks.cancelTraktAuth) }
     (state.simkl as? SimklState.AwaitingCode)?.let { SimklCodeDialog(it, callbacks.cancelSimklAuth) }
@@ -843,7 +869,21 @@ fun BoxScope.HomeOverlays(state: HomeUiState, callbacks: HomeCallbacks, o: Overl
             onDismiss = { o.simklLink = null },
         )
     }
-    if (o.quick) {
+    val onQuick: (QuickAction) -> Unit = { a ->
+        when (a) {
+            QuickAction.SLEEP -> callbacks.cycleSleepTimer()
+            QuickAction.SPOILERS -> callbacks.setSpoilers(!state.spoilers)
+            QuickAction.TEAMS -> { o.quick = false; callbacks.editTeams() }
+            QuickAction.PHONE -> { o.quick = false; callbacks.refreshPhone(); o.phone = true }
+            QuickAction.UPDATE -> callbacks.updateAction()
+            QuickAction.SCREENSAVER -> { o.quick = false; callbacks.previewScreensaver() }
+            QuickAction.HOMEBASE -> { o.quick = false; callbacks.loadIptvStatus(); o.settings = true }
+            else -> { o.quick = false; callbacks.openSystemSettings(a) }
+        }
+    }
+    if (o.quick && aura) {
+        AuraControlCenter(state, onAction = onQuick, onAccounts = { o.quick = false; o.account = true })
+    } else if (o.quick) {
         ControlCenter(
             sleepMinutesLeft = state.sleepMinutes,
             status = mapOf(
@@ -860,18 +900,7 @@ fun BoxScope.HomeOverlays(state: HomeUiState, callbacks: HomeCallbacks, o: Overl
                 QuickAction.SPOILERS.takeIf { state.spoilers },
                 QuickAction.UPDATE.takeIf { state.update.available != null },
             ),
-            onAction = { a ->
-                when (a) {
-                    QuickAction.SLEEP -> callbacks.cycleSleepTimer()
-                    QuickAction.SPOILERS -> callbacks.setSpoilers(!state.spoilers)
-                    QuickAction.TEAMS -> { o.quick = false; callbacks.editTeams() }
-                    QuickAction.PHONE -> { o.quick = false; callbacks.refreshPhone(); o.phone = true }
-                    QuickAction.UPDATE -> callbacks.updateAction()
-                    QuickAction.SCREENSAVER -> { o.quick = false; callbacks.previewScreensaver() }
-                    QuickAction.HOMEBASE -> { o.quick = false; callbacks.loadIptvStatus(); o.settings = true }
-                    else -> { o.quick = false; callbacks.openSystemSettings(a) }
-                }
-            },
+            onAction = onQuick,
         )
     }
     if (o.settings) {
