@@ -253,7 +253,8 @@ Android only installs an update that's signed with the same key as the installed
    - `SIGNING_STORE_PASSWORD`: the password you chose
    - `SIGNING_KEY_ALIAS`: `homebase`
    - `SIGNING_KEY_PASSWORD`: the key password (leave unset if it's the same as the store password)
-3. Push any commit, or re-run the workflow. That build is signed and published.
+3. In the repo's *Actions* tab, open *Build APK* and choose *Run workflow* (or push any commit). That build is
+   signed and published.
 4. **Once:** builds before this were signed with a throwaway key, so Android won't update them. Back up from the
    phone page, uninstall HomeBase, install the new `HomeBase.apk`, then restore the backup and re-enter the API
    keys. After that, updates install over the top.

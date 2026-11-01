@@ -42,7 +42,7 @@ jobs:
           name: HomeBase-apk
           path: app/build/outputs/apk/release/*.apk
       - name: Publish self-update (default branch, signed builds only)
-        if: github.event_name == 'push' && env.HAS_SIGNING == 'true' && github.ref_name == github.event.repository.default_branch
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && env.HAS_SIGNING == 'true' && github.ref_name == github.event.repository.default_branch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
