@@ -165,6 +165,16 @@ class XtreamClient(context: Context, override val config: SourceConfig.Xtream) :
         return Playable(movieUrl(best), year?.let { "$title ($it)" } ?: title)
     }
 
+    override suspend fun searchVod(query: String, limit: Int): List<Pair<String, Playable>> {
+        val q = query.trim().lowercase()
+        if (q.length < 2) return emptyList()
+        return movies().asSequence()
+            .filter { it.name.lowercase().contains(q) }
+            .take(limit)
+            .map { v -> v.name to Playable(movieUrl(v), v.name) }
+            .toList()
+    }
+
     companion object {
         private const val MAX_AGE = 24 * 3600_000L
 

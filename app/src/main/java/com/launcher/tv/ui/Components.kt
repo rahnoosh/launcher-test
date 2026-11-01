@@ -73,9 +73,15 @@ fun leagueColor(league: String): Color = when (league) {
     "UFC" -> Color(0xFF8B1010)
     "Boxing" -> Color(0xFF7A5A12)
     "F1" -> Color(0xFF0F5132)
+    "Golf" -> Color(0xFF1E5631)
+    "Tennis" -> Color(0xFF3A5F0B)
     "NFL" -> Color(0xFF013369)
-    "NBA" -> Color(0xFF1D428A)
+    "NBA", "WNBA" -> Color(0xFF1D428A)
     "MLB" -> Color(0xFF041E42)
+    "NHL" -> Color(0xFF111111)
+    "Premier League" -> Color(0xFF3D195B)
+    "Champions League" -> Color(0xFF0E1E5B)
+    "MLS", "LaLiga" -> Color(0xFF1B2A41)
     else -> Color(0xFF3B0A14)
 }
 
@@ -206,6 +212,13 @@ private fun TileFace(tile: Tile) {
             Tile.AllApps -> {
                 Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF2B313D), Color(0xFF161A22)))))
                 Icon(painterResource(R.drawable.ic_grid), "All apps", Modifier.align(Alignment.Center).size((w * 0.38f).dp), tint = Color.White)
+            }
+            Tile.EditTeams -> {
+                Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF2B313D), Color(0xFF161A22)))))
+                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("+", color = Accent, fontSize = (w * 0.3f).sp, fontWeight = FontWeight.Light)
+                    Text("Teams", color = Color.White, fontSize = (w * 0.12f).sp, fontWeight = FontWeight.Bold)
+                }
             }
             Tile.ConnectTrakt -> {
                 Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF5B1B7A), Color(0xFF1A0A24)))))

@@ -68,6 +68,12 @@ data class HomeUiState(
     val alerts: Boolean = true,
     val scoringAlerts: Boolean = true,
     val sleepMinutes: Int = 0,
+    /** Which API keys are set (Trakt, TMDB). */
+    val keys: Pair<Boolean, Boolean> = false to false,
+    /** How many teams are followed (Quick settings tile). */
+    val teamsCount: Int = 0,
+    val phone: PhoneInfo = PhoneInfo(enabled = true, running = false, address = null, loginLink = null, pin = ""),
+    val update: com.launcher.tv.update.UpdateManager.State = com.launcher.tv.update.UpdateManager.State(),
     /** "rows" (streaming-app style, default) or "tiles" (console style). */
     val layout: String = "rows",
     /** Experimental: type the channel number into TiviMate over local ADB. */
@@ -120,6 +126,122 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         }
         // Download the provider's catalogues in the background so Play is instant later.
         viewModelScope.launch { library.prefetch() }
+
+        // Changes made on the Teams screen or the phone page.
+        viewModelScope.launch {
+            com.launcher.tv.data.ChangeBus.events.collect { topic ->
+                when (topic) {
+                    com.launcher.tv.data.ChangeBus.FOLLOWS -> scheduleFollowRefresh()
+                    com.launcher.tv.data.ChangeBus.PROVIDERS -> {
+                        _state.update { it.copy(iptv = library.isConfigured, sources = sourceRows(emptyMap()), channels = emptyMap()) }
+                        launch { library.prefetch() }
+                    }
+                    com.launcher.tv.data.ChangeBus.SETTINGS -> reloadSettings()
+                    com.launcher.tv.data.ApiKeys.CHANGED -> {
+                        _state.update { it.copy(trakt = currentTraktState(), keys = keyStatus()) }
+                        refresh(force = true, restart = true)
+                    }
+                }
+            }
+        }
+        // Self-update status and download progress.
+        viewModelScope.launch {
+            com.launcher.tv.update.UpdateManager.state.collect { u ->
+                _state.update {
+                    val downloading = u.progress?.let { p -> "Downloading update ${(p * 100).toInt()}%" }
+                    it.copy(update = u, busy = downloading ?: it.busy?.takeUnless { b -> b.startsWith("Downloading update") })
+                }
+            }
+        }
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(20_000)
+            com.launcher.tv.update.UpdateManager.check()
+        }
+        _state.update { it.copy(teamsCount = com.launcher.tv.data.sports.FollowStore.load(app).teams.size, keys = keyStatus()) }
+        refreshPhone()
+    }
+
+    private fun keyStatus(): Pair<Boolean, Boolean> {
+        val app = getApplication<Application>()
+        return com.launcher.tv.data.ApiKeys.hasTrakt(app) to com.launcher.tv.data.ApiKeys.hasTmdb(app)
+    }
+
+    /** Keys typed on the TV; blank fields keep the current value. */
+    fun saveKeys(traktId: String, traktSecret: String, tmdb: String) {
+        com.launcher.tv.data.ApiKeys.save(getApplication(), traktId, traktSecret, tmdb)
+        _state.update { it.copy(message = "Keys saved") }
+    }
+
+    private var followJob: Job? = null
+
+    /** Many quick changes on the Teams screen become one refresh. */
+    private fun scheduleFollowRefresh() {
+        _state.update { it.copy(teamsCount = com.launcher.tv.data.sports.FollowStore.load(getApplication()).teams.size) }
+        followJob?.cancel()
+        followJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(1_500)
+            refresh(force = true, restart = true)
+        }
+    }
+
+    private fun reloadSettings() {
+        val app = getApplication<Application>()
+        _state.update {
+            it.copy(
+                spoilers = com.launcher.tv.data.Spoilers.enabled(app),
+                revealed = com.launcher.tv.data.Spoilers.revealed(app),
+                alerts = AlertSettings.enabled(app),
+                scoringAlerts = AlertSettings.scoring(app),
+                tiviMateTuning = com.launcher.tv.player.TiviMateTuner.enabled(app),
+                layout = app.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).getString("layout", "rows") ?: "rows",
+                sleepMinutes = SleepTimer.minutesLeft(app),
+            )
+        }
+    }
+
+    // ---------------- phone page & updates ----------------
+
+    fun refreshPhone() {
+        val app = getApplication<Application>()
+        val p = com.launcher.tv.phone.PhoneLink
+        _state.update {
+            it.copy(phone = PhoneInfo(p.enabled(app), p.isRunning(), p.address(), p.loginLink(app), p.pin(app)))
+        }
+    }
+
+    fun newPhonePin() {
+        com.launcher.tv.phone.PhoneLink.newPin(getApplication())
+        refreshPhone()
+    }
+
+    fun togglePhonePage() {
+        val app = getApplication<Application>()
+        com.launcher.tv.phone.PhoneLink.setEnabled(app, !com.launcher.tv.phone.PhoneLink.enabled(app))
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(600) // the server starts on a background thread
+            refreshPhone()
+        }
+    }
+
+    /** Installs the waiting update, or checks for one. */
+    fun updateAction() {
+        viewModelScope.launch {
+            val u = com.launcher.tv.update.UpdateManager
+            if (u.state.value.available == null) {
+                _state.update { it.copy(busy = "Checking for updates…") }
+                val found = u.check(force = true)
+                _state.update {
+                    it.copy(
+                        busy = null,
+                        message = found?.let { f -> "Update ${f.versionName} is available. Choose Updates again to install it." }
+                            ?: (u.state.value.error?.let { e -> "Couldn't check for updates: $e" } ?: "HomeBase is up to date (${u.currentVersion})"),
+                    )
+                }
+            } else {
+                val msg = u.install(getApplication())
+                if (msg != null) _state.update { it.copy(message = msg) }
+            }
+        }
     }
 
     // ---------------- IPTV ----------------
@@ -128,10 +250,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _state.update { it.copy(busy = "Checking your provider login…") }
             try {
-                val cfg = XtreamClient.normalize(server, username, password)
-                val account = XtreamClient.account(cfg)
-                library.add(SourceConfig.Xtream(IptvLibrary.newId(), IptvLibrary.hostOf(cfg.server), cfg.server, cfg.username, cfg.password))
-                afterSourcesChanged("Provider connected (${account.status}). Loading channels…")
+                val status = com.launcher.tv.data.iptv.ProviderSetup.addXtream(getApplication(), server, username, password)
+                afterSourcesChanged("Provider connected ($status). Loading channels…")
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 _state.update { it.copy(message = "Couldn't connect: ${e.message}") }
@@ -142,19 +262,10 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun addM3u(url: String, epgUrl: String) {
-        // A get.php link is an Xtream login: the API gives catch-up, series info and a faster guide.
-        if (XtreamClient.isXtreamM3uLink(url)) {
-            _state.update { it.copy(message = "That M3U link is an Xtream login, so it's added as Xtream") }
-            addXtream(url, "", "")
-            return
-        }
         viewModelScope.launch {
             _state.update { it.copy(busy = "Loading playlist…") }
-            val trimmed = url.trim().let { if (it.contains("://")) it else "http://$it" }
-            val config = SourceConfig.M3u(IptvLibrary.newId(), IptvLibrary.hostOf(trimmed), trimmed, epgUrl.trim().ifBlank { null })
             try {
-                val status = IptvLibrary.create(getApplication(), config).status() // downloads and checks the playlist
-                library.add(config)
+                val status = com.launcher.tv.data.iptv.ProviderSetup.addM3u(getApplication(), url, epgUrl)
                 afterSourcesChanged("Playlist added: $status")
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
@@ -350,6 +461,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         refresh(force = false)
         reloadApps()
         refreshSystemState()
+        refreshPhone()
+        viewModelScope.launch { com.launcher.tv.update.UpdateManager.check() }
     }
 
     fun refreshSystemState() {
@@ -374,8 +487,11 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(sleepMinutes = next, serviceRunning = HomeButtonService.running, message = msg) }
     }
 
-    fun refresh(force: Boolean) {
-        if (refreshJob?.isActive == true) return
+    fun refresh(force: Boolean, restart: Boolean = false) {
+        if (refreshJob?.isActive == true) {
+            if (!restart) return
+            refreshJob?.cancel()
+        }
         refreshJob = viewModelScope.launch {
             cacheReady.await() // never refresh on top of an empty state and lose cached sections
             if (!force && !isStale()) return@launch

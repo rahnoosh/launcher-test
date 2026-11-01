@@ -85,6 +85,10 @@ class ChannelFinder(context: Context, private val library: IptvLibrary) {
             "MLB NET" to listOf("MLB Network", "MLB NET"),
             "MLBN" to listOf("MLB Network"),
             "TRUTV" to listOf("truTV"),
+            "USA NET" to listOf("USA Network", "USA NET"),
+            "ESPN DEPORTES" to listOf("ESPN Deportes"),
+            "TNT SPORTS" to listOf("TNT Sports", "TNT"),
+            "APPLE TV" to listOf("Apple TV", "MLS Season Pass"),
         )
 
         private fun networks(event: SportsEvent): List<List<String>> =
@@ -108,10 +112,19 @@ class ChannelFinder(context: Context, private val library: IptvLibrary) {
             "NFL" -> listOf("NFL", "FOOTBALL")
             "College Football" -> listOf("FOOTBALL", "NCAA", "NCAAF", "COLLEGE")
             "NBA" -> listOf("NBA", "BASKETBALL")
+            "WNBA" -> listOf("WNBA", "BASKETBALL")
+            "College Basketball" -> listOf("NCAA", "NCAAB", "BASKETBALL", "COLLEGE")
             "MLB" -> listOf("MLB", "BASEBALL")
+            "NHL" -> listOf("NHL", "HOCKEY")
+            "MLS" -> listOf("MLS", "SOCCER")
+            "Premier League" -> listOf("PREMIER", "EPL", "SOCCER", "FOOTBALL")
+            "Champions League" -> listOf("CHAMPIONS", "UCL", "SOCCER", "FOOTBALL")
+            "LaLiga" -> listOf("LALIGA", "LIGA", "SOCCER", "FOOTBALL")
             "UFC" -> listOf("UFC", "MMA")
             "Boxing" -> listOf("BOXING", "PPV")
             "F1" -> listOf("F1", "FORMULA", "PRIX")
+            "Golf" -> listOf("GOLF", "PGA", "MASTERS")
+            "Tennis" -> listOf("TENNIS", "ATP", "WTA")
             else -> emptyList()
         }
 

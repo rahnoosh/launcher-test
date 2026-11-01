@@ -63,6 +63,13 @@ sealed interface Tile {
         override val subtitle = ""
     }
 
+    /** Opens the Teams screen. */
+    data object EditTeams : Tile {
+        override val key = "edit-teams"
+        override val title = "Your teams"
+        override val subtitle = "Add or remove teams"
+    }
+
     data object ConnectTrakt : Tile {
         override val key = "connect-trakt"
         override val title = "Connect Trakt"
@@ -92,10 +99,10 @@ fun buildTiles(tab: HomeTab, s: HomeUiState): List<Tile> {
     val signedIn = s.trakt == TraktState.SignedIn
     val traktPrompt: List<Tile> = when (s.trakt) {
         TraktState.SignedOut, is TraktState.AwaitingCode -> listOf(Tile.ConnectTrakt)
-        TraktState.NotConfigured -> if (tab == HomeTab.TV) listOf(Tile.Message("Trakt not set up", "Add API keys (see README)")) else emptyList()
+        TraktState.NotConfigured -> if (tab == HomeTab.TV) listOf(Tile.Message("Trakt not set up", "Enter keys: phone page or Settings → API keys")) else emptyList()
         TraktState.SignedIn -> emptyList()
     }
-    val allSports = (d.myTeams + d.nfl + d.fights + d.f1).distinctBy { it.id }
+    val allSports = (d.myTeams + d.nfl + d.fights + d.f1 + d.events).distinctBy { it.id }
     val live = allSports.filter { it.live }
     val history = s.history.filter { !it.finished }
 
@@ -109,6 +116,7 @@ fun buildTiles(tab: HomeTab, s: HomeUiState): List<Tile> {
             d.myTeams.filter { !it.live }.take(3).forEach { add(Tile.Game(it)) }
             d.fights.filter { !it.live }.take(1).forEach { add(Tile.Game(it)) }
             d.f1.take(1).forEach { add(Tile.Game(it)) }
+            d.events.take(1).forEach { add(Tile.Game(it)) }
             if (signedIn) d.watchlist.take(2).forEach { add(Tile.Media(it, Tile.Role.WATCHLIST)) }
             s.apps.firstOrNull { it.packageName == AppsRepository.TIVIMATE }?.let { add(Tile.App(it)) }
             add(Tile.AllApps)
@@ -122,7 +130,7 @@ fun buildTiles(tab: HomeTab, s: HomeUiState): List<Tile> {
             }
             addAll(traktPrompt)
         }
-        HomeTab.SPORTS -> (live + d.results + allSports.filter { !it.live }.sortedBy { it.startMillis }).map<SportsEvent, Tile> { Tile.Game(it) }
+        HomeTab.SPORTS -> (live + d.results + allSports.filter { !it.live }.sortedBy { it.startMillis }).map<SportsEvent, Tile> { Tile.Game(it) } + Tile.EditTeams
         HomeTab.APPS -> s.apps.map<AppEntry, Tile> { Tile.App(it) }
     }.distinctBy { it.key }
 
@@ -138,7 +146,7 @@ fun buildStrip(tab: HomeTab, s: HomeUiState): Strip {
     val upcomingEps = if (s.trakt == TraktState.SignedIn) d.upcomingEpisodes else emptyList()
     return when (tab) {
         HomeTab.FOR_YOU -> {
-            val events = (d.myTeams + d.fights + d.f1 + d.nfl.filter { it.live }).distinctBy { it.id }
+            val events = (d.myTeams + d.fights + d.f1 + d.events + d.nfl.filter { it.live }).distinctBy { it.id }
             val dated = events.map { (if (it.live) 0L else it.startMillis) to it.toStrip() } +
                 upcomingEps.take(3).map { (it.timeMillis ?: Long.MAX_VALUE) to it.toStrip() }
             Strip("Coming up", "from Trakt and your teams", dated.sortedBy { it.first }.map { it.second }.distinctBy { it.key }.take(8))
@@ -180,9 +188,10 @@ fun buildRows(tab: HomeTab, s: HomeUiState): List<HomeRow> {
     val signedIn = s.trakt == TraktState.SignedIn
     val traktPrompt: List<Tile> = when (s.trakt) {
         TraktState.SignedOut, is TraktState.AwaitingCode -> listOf(Tile.ConnectTrakt)
-        else -> emptyList()
+        TraktState.NotConfigured -> listOf(Tile.Message("Trakt not set up", "Enter keys: phone page or Settings → API keys"))
+        TraktState.SignedIn -> emptyList()
     }
-    val sports = (d.myTeams + d.nfl + d.fights + d.f1).distinctBy { it.id }
+    val sports = (d.myTeams + d.nfl + d.fights + d.f1 + d.events).distinctBy { it.id }
     val live = sports.filter { it.live }
     val liveIds = live.map { it.id }.toSet()
     val teamIds = d.myTeams.map { it.id }.toSet()
@@ -192,19 +201,20 @@ fun buildRows(tab: HomeTab, s: HomeUiState): List<HomeRow> {
     val continueWatching = HomeRow("Continue Watching", s.history.filter { !it.finished }.take(15).map { Tile.Resume(it) })
     val liveNow = HomeRow("Live Now", live.map { Tile.Game(it) })
     val nextUp = HomeRow("Next Up", (if (signedIn) media(d.upNext, Tile.Role.UP_NEXT) else emptyList()) + traktPrompt)
-    val teams = HomeRow("Your Teams", games(d.myTeams))
+    val teams = HomeRow("Your Teams", games(d.myTeams) + Tile.EditTeams)
     val results = HomeRow("Recent Results", d.results.map { Tile.Game(it) })
     val newEpisodes = HomeRow("New Episodes", if (signedIn) media(d.upcomingEpisodes, Tile.Role.UPCOMING) else emptyList())
     val fights = HomeRow("Fight Night", games(d.fights))
     val nfl = HomeRow("NFL This Week", games(d.nfl.filter { it.id !in teamIds }))
     val f1 = HomeRow("Formula 1", games(d.f1))
+    val majors = HomeRow("Golf & Tennis", games(d.events))
     val watchlist = HomeRow("My Watchlist", if (signedIn) media(d.watchlist, Tile.Role.WATCHLIST) else emptyList())
     val apps = s.apps.map { Tile.App(it) }
 
     val rows = when (tab) {
-        HomeTab.FOR_YOU -> listOf(continueWatching, liveNow, nextUp, teams, results, newEpisodes, fights, nfl, f1, watchlist, HomeRow("Apps", apps.take(12)))
+        HomeTab.FOR_YOU -> listOf(continueWatching, liveNow, nextUp, teams, results, newEpisodes, fights, nfl, f1, majors, watchlist, HomeRow("Apps", apps.take(12)))
         HomeTab.TV -> listOf(continueWatching, nextUp, newEpisodes, watchlist)
-        HomeTab.SPORTS -> listOf(liveNow, teams, results, fights, nfl, f1)
+        HomeTab.SPORTS -> listOf(liveNow, teams, results, fights, nfl, f1, majors)
         HomeTab.APPS -> apps.chunked(6).mapIndexed { i, chunk -> HomeRow(if (i == 0) "Apps" else "", chunk) }
     }.filter { it.tiles.isNotEmpty() }
 

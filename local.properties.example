@@ -1,4 +1,6 @@
 # Copy to local.properties (git-ignored) and fill in.
+# API keys here are built into your LOCAL APK only (CI builds never contain keys).
+# You can also leave them empty and enter them on the TV or the phone page.
 # sdk.dir is written by Android Studio automatically.
 
 # https://trakt.tv/oauth/applications -> New application

@@ -24,8 +24,10 @@ import java.time.OffsetDateTime
  */
 class TraktClient(context: Context) {
     private val prefs = context.getSharedPreferences("trakt", Context.MODE_PRIVATE)
-    private val clientId = BuildConfig.TRAKT_CLIENT_ID
-    private val clientSecret = BuildConfig.TRAKT_CLIENT_SECRET
+    private val appContext = context.applicationContext
+    // Read each time: keys can be entered later on the TV or the phone page.
+    private val clientId: String get() = com.launcher.tv.data.ApiKeys.traktId(appContext)
+    private val clientSecret: String get() = com.launcher.tv.data.ApiKeys.traktSecret(appContext)
 
     val isConfigured: Boolean get() = clientId.isNotBlank() && clientSecret.isNotBlank()
     val isSignedIn: Boolean get() = prefs.getString(KEY_ACCESS, null) != null

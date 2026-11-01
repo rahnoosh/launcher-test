@@ -51,7 +51,10 @@ enum class QuickAction(val label: String, @DrawableRes val icon: Int) {
     SOUND("Sound", R.drawable.ic_volume),
     SLEEP("Sleep timer", R.drawable.ic_moon),
     SPOILERS("Spoiler mode", R.drawable.ic_visibility_off),
+    TEAMS("Your teams", R.drawable.ic_trophy),
+    PHONE("Phone page", R.drawable.ic_phone),
     SCREENSAVER("Screensaver", R.drawable.ic_image),
+    UPDATE("Updates", R.drawable.ic_download),
     HOMEBASE("HomeBase", R.drawable.ic_tune),
     ALL("All settings", R.drawable.ic_settings),
 }
@@ -101,16 +104,18 @@ fun BoxScope.ControlCenter(
             Spacer(Modifier.weight(1f))
             Text("BACK to close", color = Faint, fontSize = 10.sp)
         }
-        Row(Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            QuickAction.entries.forEachIndexed { i, a ->
-                val sub = if (a == QuickAction.SLEEP) com.launcher.tv.system.SleepTimer.label(sleepMinutesLeft) else status[a].orEmpty()
-                QuickTile(
-                    action = a,
-                    subtitle = sub,
-                    highlighted = (a == QuickAction.SLEEP && sleepMinutesLeft > 0) || a in active,
-                    onClick = { onAction(a) },
-                    modifier = Modifier.weight(1f).then(if (i == 0) Modifier.focusRequester(first) else Modifier),
-                )
+        QuickAction.entries.chunked(6).forEachIndexed { rowIndex, row ->
+            Row(Modifier.padding(top = if (rowIndex == 0) 12.dp else 10.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEachIndexed { i, a ->
+                    val sub = if (a == QuickAction.SLEEP) com.launcher.tv.system.SleepTimer.label(sleepMinutesLeft) else status[a].orEmpty()
+                    QuickTile(
+                        action = a,
+                        subtitle = sub,
+                        highlighted = (a == QuickAction.SLEEP && sleepMinutesLeft > 0) || a in active,
+                        onClick = { onAction(a) },
+                        modifier = Modifier.weight(1f).then(if (rowIndex == 0 && i == 0) Modifier.focusRequester(first) else Modifier),
+                    )
+                }
             }
         }
     }
@@ -120,7 +125,7 @@ fun BoxScope.ControlCenter(
 private fun QuickTile(action: QuickAction, subtitle: String, highlighted: Boolean, onClick: () -> Unit, modifier: Modifier) {
     Surface(
         onClick = onClick,
-        modifier = modifier.height(96.dp),
+        modifier = modifier.height(86.dp),
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(14.dp)),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (highlighted) Accent.copy(alpha = 0.28f) else Color.White.copy(alpha = 0.07f),

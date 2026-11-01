@@ -72,7 +72,7 @@ fun buildSlides(d: HomeData, now: Long): List<Slide> {
         .filter { it.second.imageUrl != null }
         .distinctBy { it.second.title }
         .map { (k, m) -> Slide("m-${m.id}", k, m.title, m.subtitle.substringBefore(" · "), m.imageUrl, listOf(seedColor(m.title))) }
-    val games = (d.myTeams + d.fights + d.f1).filter { it.live || it.startMillis > now - 3 * 3600_000L }
+    val games = (d.myTeams + d.fights + d.f1 + d.events).filter { it.live || it.startMillis > now - 3 * 3600_000L }
         .sortedBy { it.startMillis }.take(3)
         .map { e ->
             val colors = listOfNotNull(e.away?.mainColor(), e.home?.mainColor()).ifEmpty { listOf(leagueColor(e.league)) }
@@ -92,13 +92,13 @@ fun buildSlides(d: HomeData, now: Long): List<Slide> {
 }
 
 fun buildBoard(d: HomeData, now: Long): Pair<List<BoardRow>, List<BoardRow>> {
-    val sports = (d.myTeams + d.fights + d.f1 + d.nfl).distinctBy { it.id }
+    val sports = (d.myTeams + d.fights + d.f1 + d.events + d.nfl).distinctBy { it.id }
     val live = sports.filter { it.live }.map {
         BoardRow("l-${it.id}", "LIVE", it.title, listOfNotNull(it.status, it.broadcast).joinToString(" · "), it, live = true)
     }
     val horizon = now + 3 * 86_400_000L
     val upcoming = (
-        (d.myTeams + d.fights + d.f1).distinctBy { it.id }.filter { !it.live && !it.finished && it.startMillis in now..horizon }
+        (d.myTeams + d.fights + d.f1 + d.events).distinctBy { it.id }.filter { !it.live && !it.finished && it.startMillis in now..horizon }
             .map { it.startMillis to BoardRow("s-${it.id}", whenText(it.startMillis, now), it.title, listOfNotNull(it.league, it.broadcast).joinToString(" · "), it, false) } +
             d.upcomingEpisodes.filter { (it.timeMillis ?: 0L) in now..horizon }
                 .map { it.timeMillis!! to BoardRow("e-${it.id}", whenText(it.timeMillis!!, now), it.title, "New episode · ${it.subtitle.substringBefore(" · ")}", null, false) }

@@ -117,6 +117,7 @@ fun RowsLayout(
             highlights = callbacks.highlights,
             revealScore = callbacks.revealScore,
             compareProviders = callbacks.compareProviders,
+            editTeams = callbacks.editTeams,
             iptv = state.iptv,
         )
     }
@@ -266,6 +267,12 @@ private fun Billboard(tile: Tile, state: HomeUiState, modifier: Modifier) {
                 Hint("OK  Open")
             }
             Tile.AllApps -> { Eyebrow("Apps"); Title("All apps") }
+            Tile.EditTeams -> {
+                Eyebrow("Sports")
+                Title("Your teams")
+                Overview("Add or remove teams from the NFL, college football, NBA, WNBA, college basketball, MLB, NHL, MLS, Premier League, Champions League and LaLiga, plus fights, F1, golf majors and tennis Grand Slams.")
+                Hint("OK  Edit teams")
+            }
             Tile.ConnectTrakt -> {
                 Eyebrow("Trakt")
                 Title("Connect Trakt")
@@ -364,6 +371,13 @@ private fun RowCardFace(tile: Tile) {
             Tile.AllApps -> {
                 Box(Modifier.fillMaxSize().background(Color(0xFF22262E)))
                 Icon(painterResource(R.drawable.ic_grid), "All apps", Modifier.align(Alignment.Center).size(34.dp), tint = Color.White)
+            }
+            Tile.EditTeams -> {
+                Box(Modifier.fillMaxSize().background(Color(0xFF22262E)))
+                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("+", color = Accent, fontSize = 30.sp, fontWeight = FontWeight.Light)
+                    Text("Add or remove teams", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
             }
             Tile.ConnectTrakt -> {
                 Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF5B1B7A), Color(0xFF1A0A24)))))

@@ -132,6 +132,16 @@ class M3uSource(context: Context, override val config: SourceConfig.M3u) : IptvS
             if (isEpisode != episodes || p.name.isBlank()) null else Names.titleKey(p.name) to (p to v)
         }.groupBy({ it.first }, { it.second })
 
+    override suspend fun searchVod(query: String, limit: Int): List<Pair<String, Playable>> {
+        val q = query.trim().lowercase()
+        if (q.length < 2) return emptyList()
+        return playlist().vod.asSequence()
+            .filter { it.name.lowercase().contains(q) }
+            .take(limit)
+            .map { v -> v.name to Playable(v.url, v.name, v.userAgent?.let { mapOf("User-Agent" to it) } ?: emptyMap()) }
+            .toList()
+    }
+
     override suspend fun prefetch() {
         playlist()
         runCatching { epg() }

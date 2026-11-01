@@ -10,6 +10,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -122,7 +124,13 @@ class HomeCallbacks(
     val tiviMateFromCheck: (CheckRow) -> Unit = {},
     val setTiviMateTuning: (Boolean) -> Unit = {},
     val setLayout: (String) -> Unit = {},
+    val editTeams: () -> Unit = {},
     val testTiviMateTuning: () -> Unit = {},
+    val refreshPhone: () -> Unit = {},
+    val newPhonePin: () -> Unit = {},
+    val togglePhonePage: () -> Unit = {},
+    val updateAction: () -> Unit = {},
+    val saveKeys: (String, String, String) -> Unit = { _, _, _ -> },
 )
 
 @Composable
@@ -173,6 +181,12 @@ fun HomeScreen(vm: HomeViewModel) {
             setTiviMateTuning = vm::setTiviMateTuning,
             testTiviMateTuning = vm::testTiviMateTuning,
             setLayout = vm::setLayout,
+            editTeams = { context.startActivity(Intent(context, TeamsActivity::class.java)) },
+            refreshPhone = vm::refreshPhone,
+            newPhonePin = vm::newPhonePin,
+            togglePhonePage = vm::togglePhonePage,
+            updateAction = vm::updateAction,
+            saveKeys = vm::saveKeys,
         )
     }
     if (state.layout == "tiles") HomeLayout(state, callbacks) else RowsLayout(state, callbacks)
@@ -229,6 +243,7 @@ fun HomeLayout(
             highlights = callbacks.highlights,
             revealScore = callbacks.revealScore,
             compareProviders = callbacks.compareProviders,
+            editTeams = callbacks.editTeams,
             iptv = state.iptv,
         )
     }
@@ -469,9 +484,11 @@ fun HomeBaseTheme(content: @Composable () -> Unit) {
 
 @Composable
 private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXtream: () -> Unit, onAddM3u: () -> Unit, onDismiss: () -> Unit) {
+    val context = LocalContext.current
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
-            Modifier.width(540.dp).background(Color(0xFF1C222B), RoundedCornerShape(16.dp)).padding(26.dp),
+            Modifier.width(560.dp).heightIn(max = 500.dp).background(Color(0xFF1C222B), RoundedCornerShape(16.dp))
+                .verticalScroll(rememberScrollState()).padding(26.dp),
         ) {
             Text("Settings", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
 
@@ -498,6 +515,16 @@ private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXt
                 PillButton("Alerts: " + if (state.alerts) "On" else "Off", { callbacks.setAlerts(!state.alerts) })
                 PillButton("Scoring plays: " + if (state.scoringAlerts) "On" else "Off", { callbacks.setScoringAlerts(!state.scoringAlerts) })
             }
+            SettingsSection("Your teams", "${state.teamsCount} teams, plus fights, F1, golf and tennis") {
+                PillButton("Edit teams", { onDismiss(); callbacks.editTeams() }, primary = true)
+            }
+            SettingsSection(
+                "Updates",
+                state.update.available?.let { "Update ${it.versionName} is ready (you have ${com.launcher.tv.BuildConfig.VERSION_NAME})" }
+                    ?: "You have ${com.launcher.tv.BuildConfig.VERSION_NAME}",
+            ) {
+                PillButton(if (state.update.available != null) "Install update" else "Check for updates", callbacks.updateAction)
+            }
             SettingsSection("Home screen layout", "Rows: preview on top, rows of cards below. Tiles: console-style tile row.") {
                 PillButton("Rows", { callbacks.setLayout("rows") }, primary = state.layout != "tiles")
                 PillButton("Tiles", { callbacks.setLayout("tiles") }, primary = state.layout == "tiles")
@@ -511,6 +538,13 @@ private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXt
             ) {
                 PillButton("Tuning: " + if (state.tiviMateTuning) "On" else "Off", { callbacks.setTiviMateTuning(!state.tiviMateTuning) })
                 if (state.tiviMateTuning) PillButton("Test connection", callbacks.testTiviMateTuning)
+            }
+            SettingsSection(
+                "API keys",
+                "Trakt: " + (if (state.keys.first) "set" else "not set") + "  ·  TMDB artwork: " + (if (state.keys.second) "set" else "not set") +
+                    ". Stored only on this box. Easier to type on the phone page.",
+            ) {
+                PillButton("Enter keys", { showKeysForm(context) { id, secret, tmdb -> callbacks.saveKeys(id, secret, tmdb) } })
             }
             SettingsSection("Trakt", if (state.trakt == TraktState.SignedIn) "Connected" else "Not connected") {
                 if (state.trakt == TraktState.SignedIn) PillButton("Sign out", callbacks.signOutTrakt)
@@ -577,6 +611,31 @@ internal fun ChannelPicker(event: SportsEvent, lookup: ChannelLookup?, onPick: (
     }
 }
 
+/** Trakt client id/secret and TMDB key; blank fields keep what's saved. */
+private fun showKeysForm(context: android.content.Context, onSave: (String, String, String) -> Unit) {
+    val pad = (20 * context.resources.displayMetrics.density).toInt()
+    fun field(hint: String) = EditText(context).apply {
+        this.hint = hint
+        isSingleLine = true
+        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+    }
+    val id = field("Trakt Client ID")
+    val secret = field("Trakt Client Secret")
+    val tmdb = field("TMDB API key (optional, for artwork)")
+    val layout = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(pad, pad / 2, pad, 0)
+        addView(id); addView(secret); addView(tmdb)
+    }
+    AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        .setTitle("API keys")
+        .setMessage("From trakt.tv/oauth/applications and themoviedb.org/settings/api. Leave a field empty to keep what's saved.")
+        .setView(layout)
+        .setPositiveButton("Save") { _, _ -> onSave(id.text.toString(), secret.text.toString(), tmdb.text.toString()) }
+        .setNegativeButton("Cancel", null)
+        .show()
+}
+
 /** M3U playlist URL plus an optional XMLTV guide URL. */
 private fun showM3uForm(context: android.content.Context, onSave: (String, String) -> Unit) {
     val pad = (20 * context.resources.displayMetrics.density).toInt()
@@ -630,6 +689,7 @@ private fun showXtreamForm(context: android.content.Context, onSave: (String, St
 /** Which home-screen overlays are open; shared by both layouts. */
 class OverlayState(quick: Boolean = false) {
     var quick by mutableStateOf(quick)
+    var phone by mutableStateOf(false)
     var settings by mutableStateOf(false)
     var account by mutableStateOf(false)
 }
@@ -649,12 +709,21 @@ fun BoxScope.HomeOverlays(state: HomeUiState, callbacks: HomeCallbacks, o: Overl
                 QuickAction.WIFI to "Wi-Fi & Ethernet",
                 QuickAction.DISPLAY to "Picture & HDR",
                 QuickAction.SPOILERS to if (state.spoilers) "On" else "Off",
+                QuickAction.TEAMS to "${state.teamsCount} teams",
+                QuickAction.PHONE to if (state.phone.enabled) "Scan to open" else "Off",
+                QuickAction.UPDATE to (state.update.available?.let { "Update to ${it.versionName}" } ?: "Version ${com.launcher.tv.BuildConfig.VERSION_NAME}"),
             ),
-            active = if (state.spoilers) setOf(QuickAction.SPOILERS) else emptySet(),
+            active = setOfNotNull(
+                QuickAction.SPOILERS.takeIf { state.spoilers },
+                QuickAction.UPDATE.takeIf { state.update.available != null },
+            ),
             onAction = { a ->
                 when (a) {
                     QuickAction.SLEEP -> callbacks.cycleSleepTimer()
                     QuickAction.SPOILERS -> callbacks.setSpoilers(!state.spoilers)
+                    QuickAction.TEAMS -> { o.quick = false; callbacks.editTeams() }
+                    QuickAction.PHONE -> { o.quick = false; callbacks.refreshPhone(); o.phone = true }
+                    QuickAction.UPDATE -> callbacks.updateAction()
                     QuickAction.SCREENSAVER -> { o.quick = false; callbacks.previewScreensaver() }
                     QuickAction.HOMEBASE -> { o.quick = false; callbacks.loadIptvStatus(); o.settings = true }
                     else -> { o.quick = false; callbacks.openSystemSettings(a) }
@@ -670,6 +739,9 @@ fun BoxScope.HomeOverlays(state: HomeUiState, callbacks: HomeCallbacks, o: Overl
             onAddM3u = { showM3uForm(context) { url, epg -> callbacks.addM3u(url, epg) } },
             onDismiss = { o.settings = false },
         )
+    }
+    if (o.phone) {
+        PhonePanel(state.phone, onNewPin = callbacks.newPhonePin, onToggle = callbacks.togglePhonePage, onClose = { o.phone = false })
     }
     state.streamCheck?.let { check ->
         StreamCheckDialog(check, onWatch = callbacks.watchFromCheck, onTiviMate = callbacks.tiviMateFromCheck, onDismiss = callbacks.closeStreamCheck)

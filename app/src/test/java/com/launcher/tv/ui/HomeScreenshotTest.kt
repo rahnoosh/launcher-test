@@ -163,6 +163,34 @@ class HomeScreenshotTest {
         }
     }
 
+    @Test fun teamsScreen() {
+        val cfg = com.launcher.tv.data.sports.FollowConfig()
+        val nfl = com.launcher.tv.data.sports.Leagues.byKey("nfl")!!
+        val colors = listOf("97233F", "A71930", "241773", "00338D", "0085CA", "0B162A", "E31837", "008E97", "002244", "125740", "004C54", "FFB612")
+        val teams = listOf(
+            "Arizona Cardinals" to "ARI", "Atlanta Falcons" to "ATL", "Baltimore Ravens" to "BAL", "Buffalo Bills" to "BUF",
+            "Carolina Panthers" to "CAR", "Chicago Bears" to "CHI", "Kansas City Chiefs" to "KC", "Miami Dolphins" to "MIA",
+            "New England Patriots" to "NE", "New York Jets" to "NYJ", "Philadelphia Eagles" to "PHI", "Pittsburgh Steelers" to "PIT",
+        ).mapIndexed { i, (n, a) ->
+            com.launcher.tv.data.sports.FollowedTeam("nfl", if (a == "NE") "17" else "${100 + i}", n, a, colors[i])
+        }
+        paparazzi.snapshot {
+            HomeBaseTheme { TeamsScreen(cfg, nfl, teams, null, "", {}, {}, {}, {}, {}, {}) }
+        }
+    }
+
+    @Test fun phonePanel() {
+        val info = PhoneInfo(enabled = true, running = true, address = "http://192.168.1.40:8686", loginLink = "http://192.168.1.40:8686/?pin=482913", pin = "482913")
+        paparazzi.snapshot {
+            HomeBaseTheme {
+                androidx.compose.foundation.layout.Box(
+                    androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF0B0E14)),
+                    contentAlignment = androidx.compose.ui.Alignment.Center,
+                ) { PhonePanelContent(info, {}, {}, {}) }
+            }
+        }
+    }
+
     /** The live alert card drawn over whatever is playing. */
     @Test fun alertCard() {
         val ctx = paparazzi.context

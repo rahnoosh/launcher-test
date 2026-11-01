@@ -47,6 +47,7 @@ class HomeActions(
     val openGame: (SportsEvent) -> Unit = {},
     val highlights: (SportsEvent) -> Unit = {},
     val revealScore: (SportsEvent) -> Unit = {},
+    val editTeams: () -> Unit = {},
     val compareProviders: (SportsEvent) -> Unit = {},
     val playMedia: (com.launcher.tv.data.MediaItem) -> Unit = {},
     /** IPTV login saved: Watch/Play go straight to the stream. */
@@ -61,6 +62,7 @@ fun Tile.primaryAction(a: HomeActions): () -> Unit = when (this) {
     is Tile.App -> { { a.launchApp(app.packageName) } }
     Tile.AllApps -> a.showApps
     Tile.ConnectTrakt -> a.connectTrakt
+    Tile.EditTeams -> a.editTeams
     is Tile.Message -> { {} }
 }
 
@@ -239,6 +241,12 @@ fun HeroContent(tile: Tile, actions: HomeActions, modifier: Modifier = Modifier,
                 Eyebrow("Apps")
                 Title("All apps")
                 Buttons { PillButton("Show all apps", actions.showApps, primary = true, icon = R.drawable.ic_grid) }
+            }
+            Tile.EditTeams -> {
+                Eyebrow("Sports")
+                Title("Your teams")
+                Meta(listOf("Add or remove teams, leagues, fights, F1, golf and tennis"))
+                Buttons { PillButton("Edit teams", actions.editTeams, primary = true) }
             }
             Tile.ConnectTrakt -> {
                 Eyebrow("Trakt")

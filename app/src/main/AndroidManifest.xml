@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Self-update: installs new HomeBase builds from GitHub (Android asks to confirm). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -92,6 +94,17 @@
             android:name=".ui.GameActivity"
             android:exported="false"
             android:screenOrientation="landscape" />
+
+        <!-- Teams screen: follow teams, fights, F1, golf, tennis. -->
+        <activity
+            android:name=".ui.TeamsActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+
+        <!-- Gets the package installer's answer for self-updates. -->
+        <receiver
+            android:name=".update.InstallResultReceiver"
+            android:exported="false" />
 
         <!-- Screensaver preview from Quick settings. -->
         <activity

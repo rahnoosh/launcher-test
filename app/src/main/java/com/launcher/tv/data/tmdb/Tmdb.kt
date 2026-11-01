@@ -10,6 +10,9 @@ import java.util.concurrent.ConcurrentHashMap
  * Artwork from TMDB (Trakt doesn't host images). Optional: without a key, cards show text only.
  */
 object Tmdb {
+    /** Set at app start from [com.launcher.tv.data.ApiKeys] (entered on the TV / phone page). */
+    @Volatile var apiKey: String = BuildConfig.TMDB_API_KEY
+
     enum class Type(val path: String) { TV("tv"), MOVIE("movie") }
 
     private data class Art(val poster: String?, val backdrop: String?, val overview: String?)
@@ -27,7 +30,7 @@ object Tmdb {
     suspend fun overview(type: Type, tmdbId: Long?): String? = art(type, tmdbId)?.overview
 
     private suspend fun art(type: Type, tmdbId: Long?): Art? {
-        val key = BuildConfig.TMDB_API_KEY
+        val key = apiKey
         if (key.isBlank() || tmdbId == null) return null
         val cacheKey = "${type.path}/$tmdbId"
         cache[cacheKey]?.let { return it }

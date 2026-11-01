@@ -72,6 +72,8 @@ interface IptvSource {
     fun headers(channel: IptvChannel): Map<String, String> = channel.userAgent?.let { mapOf("User-Agent" to it) } ?: emptyMap()
     suspend fun findEpisode(title: String, year: Int?, tmdbId: Long?, season: Int, episode: Int): Playable?
     suspend fun findMovie(title: String, year: Int?, tmdbId: Long?): Playable?
+    /** Title search in the movie/VOD catalogue: (display name, what to play). */
+    suspend fun searchVod(query: String, limit: Int): List<Pair<String, Playable>> = emptyList()
     suspend fun prefetch()
     /** One line for Settings, e.g. "Active · expires Mar 3" or "2,340 channels". */
     suspend fun status(): String

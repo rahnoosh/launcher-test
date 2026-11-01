@@ -42,7 +42,7 @@ object Spoilers {
         fun f(e: SportsEvent) = if (hides(true, revealed, e)) safe(e) else e
         return d.copy(
             myTeams = d.myTeams.map(::f), nfl = d.nfl.map(::f), fights = d.fights.map(::f),
-            f1 = d.f1.map(::f), results = d.results.map(::f),
+            f1 = d.f1.map(::f), results = d.results.map(::f), events = d.events.map(::f),
         )
     }
 

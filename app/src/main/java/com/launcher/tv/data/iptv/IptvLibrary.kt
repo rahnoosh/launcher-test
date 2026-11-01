@@ -37,7 +37,15 @@ class IptvLibrary private constructor(private val context: Context) {
     private fun save(list: List<SourceConfig>) {
         prefs.edit().putString("list", XJson.encodeToString(ListSerializer(SourceConfig.serializer()), list)).apply()
         built = null
+        com.launcher.tv.data.ChangeBus.emit(com.launcher.tv.data.ChangeBus.PROVIDERS)
     }
+
+    /** Restore from a backup. */
+    fun replaceAll(list: List<SourceConfig>) = save(list)
+
+    /** Movies/episodes whose title contains [query], across providers (phone page search). */
+    suspend fun searchVod(query: String, limit: Int = 12): List<Pair<String, Playable>> =
+        sources.flatMap { s -> safe { s.searchVod(query, limit) }.orEmpty() }.take(limit)
 
     /** First version stored a single Xtream login under "iptv". */
     private fun migrateLegacy(): List<SourceConfig> {

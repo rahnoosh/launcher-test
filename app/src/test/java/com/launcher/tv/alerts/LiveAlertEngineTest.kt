@@ -64,6 +64,32 @@ class LiveAlertEngineTest {
         assertEquals("Score hidden (spoiler mode)", shown[1].detail)
     }
 
+    @Test fun soccerAndHockeyGoals() = runBlocking {
+        fun match(away: Int, home: Int, league: String) = SportsEvent(
+            "espn-9", "Arsenal @ Chelsea", league, start, live = true, status = "62'",
+            away = team("Arsenal", "ARS", "$away"), home = team("Chelsea", "CHE", "$home"),
+        )
+        now = start + 60_000
+        val e = engine(HomeData(myTeams = listOf(match(0, 0, "Premier League").copy(live = false))))
+        board = listOf(match(0, 0, "Premier League")); e.tick()
+        board = listOf(match(1, 0, "Premier League")); e.tick()
+        assertEquals(listOf("KICKOFF", "GOAL"), shown.map { it.kicker })
+        assertEquals("Arsenal score", shown[1].title)
+    }
+
+    @Test fun collegeBasketballCloseGameInSecondHalf() = runBlocking {
+        now = start + 3600_000
+        fun game(a: Int, h: Int, period: Int) = SportsEvent(
+            "espn-10", "Alabama @ Auburn", "College Basketball", start, live = true, period = period, status = "H$period",
+            away = team("Alabama", "ALA", "$a"), home = team("Auburn", "AUB", "$h"),
+        )
+        val e = engine(HomeData(myTeams = listOf(game(0, 0, 1).copy(live = false))))
+        board = listOf(game(30, 31, 1)); e.tick()   // first look: silent
+        board = listOf(game(33, 31, 1)); e.tick()   // close, but first half
+        board = listOf(game(70, 68, 2)); e.tick()   // close in the second half
+        assertEquals(listOf("CLOSE GAME"), shown.map { it.kicker })
+    }
+
     @Test fun basketballOnlyAlertsOnCloseFinish() = runBlocking {
         now = start + 3600_000
         val e = engine(HomeData(myTeams = listOf(nba(0, 0, 1).copy(live = false))))

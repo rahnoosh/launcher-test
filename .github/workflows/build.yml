@@ -18,18 +18,41 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+      - name: Signing key (optional, needed for self-updates)
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$SIGNING_KEYSTORE_BASE64" ]; then
+            echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/homebase.keystore"
+            echo "SIGNING_KEYSTORE_FILE=$RUNNER_TEMP/homebase.keystore" >> "$GITHUB_ENV"
+            echo "HAS_SIGNING=true" >> "$GITHUB_ENV"
+          else
+            echo "No SIGNING_KEYSTORE_BASE64 secret: building with a throwaway key; self-updates won't be published."
+          fi
       - name: Build release APK
         env:
-          # Optional: add these as repository secrets so the APK has your keys baked in.
-          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
-          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
-          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-          SPORTSDB_API_KEY: ${{ secrets.SPORTSDB_API_KEY }}
+          # API keys are NOT baked into CI builds: published APKs are public. Enter them on the
+          # TV or the phone page instead (stored only on the box).
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: ./gradlew --no-daemon assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: HomeBase-apk
           path: app/build/outputs/apk/release/*.apk
+      - name: Publish self-update (default branch, signed builds only)
+        if: github.event_name == 'push' && env.HAS_SIGNING == 'true' && github.ref_name == github.event.repository.default_branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk HomeBase.apk
+          NOTES=$(git log -1 --pretty=%s | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))')
+          printf '{"versionCode": %s, "versionName": "0.%s", "commit": "%s", "notes": %s}\n' "$GITHUB_RUN_NUMBER" "$GITHUB_RUN_NUMBER" "$GITHUB_SHA" "$NOTES" > version.json
+          cat version.json
+          gh release view homebase-latest >/dev/null 2>&1 || gh release create homebase-latest --prerelease --target "$GITHUB_SHA" \
+            --title "HomeBase (latest build)" --notes "Rolling build that HomeBase's self-update installs. Updated on every signed build."
+          gh release upload homebase-latest HomeBase.apk version.json --clobber
       - name: Unit tests + home screen screenshots
         run: ./gradlew --no-daemon recordPaparazziDebug
       - name: Commit updated screenshots

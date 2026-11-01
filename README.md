@@ -16,8 +16,7 @@ A replacement home screen built around what you actually watch:
 
 Cards for shows, movies and games open **TiviMate**. Data is cached on the box, so Home opens instantly. It refreshes every 30 minutes, or every 2 minutes while one of your games is live.
 
-Teams and leagues are set in
-[`SportsConfig.kt`](app/src/main/java/com/launcher/tv/data/sports/SportsConfig.kt).
+Teams and leagues are chosen on the TV (Quick settings → Your teams) or on the phone page.
 
 ## 1. Get API keys
 
@@ -25,17 +24,19 @@ Teams and leagues are set in
    Name it anything and set the redirect URI to `urn:ietf:wg:oauth:2.0:oob`. Copy the Client ID and Client Secret.
 2. **TMDB** (optional, for artwork): https://www.themoviedb.org/settings/api → API Key.
 
-## 2. Build the APK
+You enter these **on the box**, either on the phone page (easiest) or in Quick settings → HomeBase → API keys.
+They're stored only on the box. They are **not** built into the APK: CI builds are published publicly for
+self-updates, so they must not contain secrets. Don't add them as GitHub secrets.
 
-**Option A: GitHub Actions (no Android Studio needed).**
-In the repo go to *Settings → Secrets and variables → Actions* and add `TRAKT_CLIENT_ID`,
-`TRAKT_CLIENT_SECRET` and (optionally) `TMDB_API_KEY`. Re-run the *Build APK* workflow and
-download the `HomeBase-apk` artifact.
-Keep the repo private if you do this, because the keys end up inside the APK.
+## 2. Get the APK
 
-**Option B: locally.** Copy `local.properties.example` to `local.properties`, fill in the keys,
-then run `./gradlew assembleRelease` (or open the project in Android Studio).
-The APK is written to `app/build/outputs/apk/release/`.
+**Option A: GitHub Actions (no Android Studio needed).** Every push builds the APK. Download the
+`HomeBase-apk` artifact from the run, or, once self-updates are set up (see below), the `HomeBase.apk`
+asset of the `homebase-latest` release.
+
+**Option B: locally.** Copy `local.properties.example` to `local.properties` and run `./gradlew assembleRelease`
+(or open the project in Android Studio). The APK is written to `app/build/outputs/apk/release/`.
+Keys in `local.properties` are built into that local APK. Only do that for an APK you won't share.
 
 ## 3. Install on the box
 
@@ -194,6 +195,71 @@ game page, with Best stream, Start over, Channels and Show score.
 
 **Tiles** is the console-style layout with a row of square tiles. Switch layouts in Quick settings → HomeBase →
 Home screen layout.
+
+## Your teams (on the TV)
+
+**Quick settings → Your teams**, or the **+ Add or remove teams** card at the end of *Your Teams*, opens the
+Teams screen:
+
+- Pick a league on the left, then select teams to follow or unfollow. **Search** filters long lists, which helps
+  with college football and college basketball. Leagues: NFL, college football, NBA, WNBA, college basketball,
+  MLB, NHL, MLS, Premier League, Champions League and LaLiga.
+- The row of switches turns on **every NFL game this week**, **UFC numbered events**, **big boxing fights**,
+  **Formula 1**, **golf majors** and **tennis Grand Slams**.
+- **Games per team** sets how many upcoming games each team shows (1–3).
+
+Changes show on Home within a couple of seconds. Live alerts follow whatever you pick. Hockey and soccer get
+*GOAL* alerts; basketball gets *close game* alerts late on.
+
+## Phone page
+
+HomeBase runs a small web page on your home network. **Quick settings → Phone page** shows a QR code, the
+address and a 6-digit PIN. Scan the code and you're signed in. From your phone you can:
+
+- **Watch:** search games, shows, channels and movies, then *Watch on TV* / *Play on TV* or open in TiviMate
+- **Teams:** the same as the Teams screen, with typing
+- **Providers:** add Xtream logins or M3U playlists without the TV keyboard, or remove them
+- **Settings:** API keys, spoiler mode, alerts, layout, sleep timer and one-press tuning; check for and install
+  updates; **download a backup** (teams, settings, channel picks, and provider logins only if you tick that box)
+  and **restore** it
+
+Security:
+
+- It only answers on your home network, only to the box's own address, and only after the PIN.
+- The PIN is shown only on the TV. Five wrong tries lock that phone out for a minute.
+- API keys, provider logins and stream links are never sent back to the phone. The only exception is a backup
+  file you download with *Include provider logins* ticked; keep that file private.
+- The page uses plain HTTP inside your home network, so only use it on a network you trust.
+- **New PIN** signs every phone out. **Turn off** stops the page.
+
+## Self-updates
+
+HomeBase can update itself from this repo's GitHub releases. CI publishes every build of the default branch,
+as `HomeBase.apk` plus `version.json`, to a rolling release called `homebase-latest`. These builds contain no
+API keys. When there's a newer build, *Updates* in Quick settings (and the phone page) says so. Choose it to
+download the build and install it. Android asks you to confirm, and the first time it asks you to allow HomeBase
+to install apps.
+
+Android only installs an update that's signed with the same key as the installed app. Set up a key once:
+
+1. On your computer, create a keystore (keep this file and its password safe and private; you need the same one
+   for every future build):
+   ```sh
+   keytool -genkeypair -v -keystore homebase.keystore -alias homebase -keyalg RSA -keysize 2048 -validity 10000
+   ```
+2. In the repo's *Settings → Secrets and variables → Actions*, add:
+   - `SIGNING_KEYSTORE_BASE64`: the keystore file in base64, from `base64 -w0 homebase.keystore`
+     (on macOS: `base64 -i homebase.keystore`)
+   - `SIGNING_STORE_PASSWORD`: the password you chose
+   - `SIGNING_KEY_ALIAS`: `homebase`
+   - `SIGNING_KEY_PASSWORD`: the key password (leave unset if it's the same as the store password)
+3. Push any commit, or re-run the workflow. That build is signed and published.
+4. **Once:** builds before this were signed with a throwaway key, so Android won't update them. Back up from the
+   phone page, uninstall HomeBase, install the new `HomeBase.apk`, then restore the backup and re-enter the API
+   keys. After that, updates install over the top.
+
+For local builds, put the same values in `local.properties`, with `SIGNING_KEYSTORE_FILE=/path/to/homebase.keystore`
+in place of the base64 one.
 
 ## 9. Quick settings and sleep timer
 

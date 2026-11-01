@@ -5,6 +5,8 @@ import com.launcher.tv.data.HomeData
 import com.launcher.tv.data.Http
 import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.TeamInfo
+import com.launcher.tv.data.sports.Leagues
+import com.launcher.tv.data.sports.SportKind
 import com.launcher.tv.data.sports.SportsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -94,7 +96,7 @@ class LiveAlertEngine internal constructor(
         val now = clock()
         store.pruneBefore(now - 3 * 86_400_000L)
 
-        val followed = (data.myTeams + data.fights + data.f1).distinctBy { it.id }
+        val followed = (data.myTeams + data.fights + data.f1 + data.events).distinctBy { it.id }
         // 1) Starting soon / starting now, straight from the schedule.
         for (e in followed) {
             val mins = (e.startMillis - now) / 60_000.0
@@ -139,12 +141,14 @@ class LiveAlertEngine internal constructor(
             val dA = (away.score?.toIntOrNull() ?: 0) - (before.away?.score?.toIntOrNull() ?: 0)
             val dH = (home.score?.toIntOrNull() ?: 0) - (before.home?.score?.toIntOrNull() ?: 0)
             val scorer = if (dA > 0) away else if (dH > 0) home else null
-            if (scorer != null && now.league != "NBA") {
+            val league = Leagues.byLabel(now.league)
+            val basketball = league?.kind == SportKind.BASKETBALL
+            if (scorer != null && !basketball) {
                 fire(now, "score-${away.score}-${home.score}", scoringWord(now.league, maxOf(dA, dH)), "${scorer.name} score", "$score · $clockText")
             }
-            // Basketball scores constantly: only flag a close finish.
+            // Basketball scores constantly: only flag a close finish (last quarter / second half).
             val diff = kotlin.math.abs((away.score?.toIntOrNull() ?: 0) - (home.score?.toIntOrNull() ?: 0))
-            if (now.league == "NBA" && (now.period ?: 0) >= 4 && diff <= 5) {
+            if (basketball && (now.period ?: 0) >= (league?.periods ?: 4) && diff <= 5) {
                 fire(now, "close", "CLOSE GAME", score, clockText)
             }
         }
@@ -162,22 +166,24 @@ class LiveAlertEngine internal constructor(
         show(LiveAlert(key, kicker, title, detail, listOfNotNull(e.away, e.home), e))
     }
 
-    private fun startWord(league: String) = when (league) {
-        "NFL", "College Football" -> "KICKOFF"
-        "NBA" -> "TIP-OFF"
-        "MLB" -> "FIRST PITCH"
-        else -> "UNDER WAY"
+    private fun startWord(league: String) = when (Leagues.byLabel(league)?.kind) {
+        SportKind.FOOTBALL, SportKind.SOCCER -> "KICKOFF"
+        SportKind.BASKETBALL -> "TIP-OFF"
+        SportKind.BASEBALL -> "FIRST PITCH"
+        SportKind.HOCKEY -> "PUCK DROP"
+        null -> "UNDER WAY"
     }
 
-    private fun scoringWord(league: String, points: Int) = when (league) {
-        "NFL", "College Football" -> when (points) {
+    private fun scoringWord(league: String, points: Int) = when (Leagues.byLabel(league)?.kind) {
+        SportKind.FOOTBALL -> when (points) {
             in 6..8 -> "TOUCHDOWN"
             3 -> "FIELD GOAL"
             2 -> "SAFETY"
             1 -> "EXTRA POINT"
             else -> "SCORE"
         }
-        "MLB" -> if (points == 1) "RUN SCORES" else "$points RUNS SCORE"
+        SportKind.BASEBALL -> if (points == 1) "RUN SCORES" else "$points RUNS SCORE"
+        SportKind.HOCKEY, SportKind.SOCCER -> "GOAL"
         else -> "SCORE"
     }
 }

@@ -77,7 +77,8 @@ object GameDetails {
         val awayLines = lines(away)
         val homeLines = lines(home)
         val periods = maxOf(awayLines.size, homeLines.size)
-        val regulation = if (league == "MLB") Int.MAX_VALUE else 4
+        val leagueInfo = Leagues.byLabel(league)
+        val regulation = if (leagueInfo?.kind == SportKind.BASEBALL) Int.MAX_VALUE else leagueInfo?.periods ?: 4
         val line = if (periods == 0) null else LineScore(
             labels = (1..periods).map { if (it > regulation) (if (it == regulation + 1) "OT" else "OT${it - regulation}") else "$it" },
             away = awayLines, home = homeLines,
@@ -98,6 +99,8 @@ object GameDetails {
 
         val playsSource = root.arr("scoringPlays")
             ?: root.arr("plays")?.filter { (it.obj()?.get("scoringPlay") as? JsonPrimitive)?.booleanOrNull == true }
+            // Soccer: goals are in keyEvents.
+            ?: root.arr("keyEvents")?.filter { it.obj()?.obj("type")?.str("text")?.contains("Goal", ignoreCase = true) == true }
         val plays = playsSource.orEmpty().mapNotNull { p ->
             val o = p.obj() ?: return@mapNotNull null
             val period = o.obj("period")?.str("number")?.toIntOrNull()
@@ -107,7 +110,7 @@ object GameDetails {
                 team = o.obj("team")?.let { it.str("abbreviation") ?: it.str("displayName") },
                 type = o.obj("type")?.str("text"),
                 text = o.str("text").orEmpty(),
-                score = "${o.str("awayScore") ?: "-"}–${o.str("homeScore") ?: "-"}",
+                score = if (o.str("awayScore") == null && o.str("homeScore") == null) "" else "${o.str("awayScore") ?: "-"}–${o.str("homeScore") ?: "-"}",
             )
         }.reversed().take(8)
 
@@ -147,11 +150,16 @@ object GameDetails {
         "NBA" to listOf("Field Goal %", "Three Point %", "Rebounds", "Assists", "Turnovers", "Steals", "Blocks", "Free Throw %"),
     )
 
-    private fun periodLabel(n: Int?, league: String): String = when {
-        n == null -> ""
-        league == "MLB" -> "Inn $n"
-        n > 4 -> "OT"
-        else -> "Q$n"
+    private fun periodLabel(n: Int?, league: String): String {
+        if (n == null) return ""
+        val l = Leagues.byLabel(league)
+        return when (l?.kind) {
+            SportKind.BASEBALL -> "Inn $n"
+            SportKind.HOCKEY -> if (n > 3) "OT" else "P$n"
+            SportKind.SOCCER -> when (n) { 1 -> "1st half"; 2 -> "2nd half"; else -> "Extra time" }
+            SportKind.BASKETBALL -> if (n > l.periods) "OT" else if (l.periods == 2) "H$n" else "Q$n"
+            else -> if (n > 4) "OT" else "Q$n"
+        }
     }
 
     // ---------------- F1 ----------------
