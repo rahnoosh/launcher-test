@@ -28,6 +28,8 @@ data class HistoryEntry(
     val lastPlayedAt: Long = 0,
     /** HTTP headers TiviMate passed along (some providers need a specific User-Agent). */
     val headers: Map<String, String> = emptyMap(),
+    /** A full-game replay: resumable, but never reported to Trakt or Simkl. */
+    val replay: Boolean = false,
 ) {
     val progress: Float get() = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
     val finished: Boolean get() = progress >= 0.92f

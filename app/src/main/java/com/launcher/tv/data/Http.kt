@@ -44,6 +44,15 @@ object Http {
                 .build()
         )
 
+    /** application/x-www-form-urlencoded POST (OAuth 2 token endpoints). */
+    suspend fun postForm(url: String, fields: Map<String, String>, headers: Map<String, String> = emptyMap()): String =
+        execute(
+            Request.Builder().url(url)
+                .apply { headers.forEach { (k, v) -> header(k, v) } }
+                .post(okhttp3.FormBody.Builder().apply { fields.forEach { (k, v) -> add(k, v) } }.build())
+                .build()
+        )
+
     suspend fun getJson(url: String, headers: Map<String, String> = emptyMap()): JsonElement =
         json.parseToJsonElement(get(url, headers))
 

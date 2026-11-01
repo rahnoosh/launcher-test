@@ -31,12 +31,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.launcher.tv.data.simkl.SimklClient.Sync as SimklSync
 
 sealed interface TraktState {
     data object NotConfigured : TraktState
     data object SignedOut : TraktState
     data class AwaitingCode(val userCode: String, val url: String) : TraktState
     data object SignedIn : TraktState
+}
+
+sealed interface SimklState {
+    data object NotConfigured : SimklState
+    data object SignedOut : SimklState
+    /** [qrUrl] opens Simkl's approval page with the code already filled in. */
+    data class AwaitingCode(val userCode: String, val url: String, val qrUrl: String) : SimklState
+    data object SignedIn : SimklState
 }
 
 /** A provider in Settings. */
@@ -56,6 +65,7 @@ data class HomeUiState(
     val history: List<HistoryEntry> = emptyList(),
     val refreshing: Boolean = false,
     val trakt: TraktState = TraktState.SignedOut,
+    val simkl: SimklState = SimklState.SignedOut,
     val message: String? = null,
     /** At least one IPTV provider (Xtream or M3U) added. */
     val iptv: Boolean = false,
@@ -70,6 +80,10 @@ data class HomeUiState(
     val sleepMinutes: Int = 0,
     /** Which API keys are set (Trakt, TMDB). */
     val keys: Pair<Boolean, Boolean> = false to false,
+    /** A Simkl client ID is set. */
+    val simklKey: Boolean = false,
+    /** Title of what's playing in the picture-in-picture window, if anything. */
+    val pip: String? = null,
     /** How many teams are followed (Quick settings tile). */
     val teamsCount: Int = 0,
     val phone: PhoneInfo = PhoneInfo(enabled = true, running = false, address = null, loginLink = null, pin = ""),
@@ -85,11 +99,15 @@ data class HomeUiState(
     val revealed: Set<String> = emptySet(),
     /** The HomeBase accessibility service is on (Home button, alerts, sleep timer). */
     val serviceRunning: Boolean = false,
-)
+) {
+    /** Trakt or Simkl is connected, so the show and watchlist rows have something to show. */
+    val tracking: Boolean get() = trakt == TraktState.SignedIn || simkl == SimklState.SignedIn
+}
 
 class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private val traktClient = TraktClient(app)
-    private val repo = HomeRepository(app, traktClient)
+    private val simklClient = com.launcher.tv.data.simkl.SimklClient(app)
+    private val repo = HomeRepository(app, traktClient, simklClient)
     val apps = AppsRepository(app)
     private val history = WatchHistory.get(app)
     private val library = IptvLibrary.get(app)
@@ -98,6 +116,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(
         HomeUiState(
             trakt = currentTraktState(),
+            simkl = currentSimklState(),
             iptv = library.isConfigured,
             alerts = AlertSettings.enabled(app),
             scoringAlerts = AlertSettings.scoring(app),
@@ -117,7 +136,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _state.update { it.copy(data = repo.loadCached()) }
             cacheReady.complete(Unit)
-            refresh(force = false)
+            refresh(force = false, simkl = SimklSync.IF_DUE)
         }
         reloadApps()
         viewModelScope.launch {
@@ -138,11 +157,15 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                     }
                     com.launcher.tv.data.ChangeBus.SETTINGS -> reloadSettings()
                     com.launcher.tv.data.ApiKeys.CHANGED -> {
-                        _state.update { it.copy(trakt = currentTraktState(), keys = keyStatus()) }
+                        _state.update { it.copy(trakt = currentTraktState(), simkl = currentSimklState(), keys = keyStatus(), simklKey = simklClient.isConfigured) }
                         refresh(force = true, restart = true)
                     }
                 }
             }
+        }
+        // The picture-in-picture window: shown as a Now Playing card.
+        viewModelScope.launch {
+            com.launcher.tv.player.PipWindow.title.collect { t -> _state.update { it.copy(pip = t) } }
         }
         // Self-update status and download progress.
         viewModelScope.launch {
@@ -157,7 +180,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             kotlinx.coroutines.delay(20_000)
             com.launcher.tv.update.UpdateManager.check()
         }
-        _state.update { it.copy(teamsCount = com.launcher.tv.data.sports.FollowStore.load(app).teams.size, keys = keyStatus()) }
+        _state.update { it.copy(teamsCount = com.launcher.tv.data.sports.FollowStore.load(app).teams.size, keys = keyStatus(), simklKey = simklClient.isConfigured) }
         refreshPhone()
     }
 
@@ -167,8 +190,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Keys typed on the TV; blank fields keep the current value. */
-    fun saveKeys(traktId: String, traktSecret: String, tmdb: String) {
-        com.launcher.tv.data.ApiKeys.save(getApplication(), traktId, traktSecret, tmdb)
+    fun saveKeys(traktId: String, traktSecret: String, tmdb: String, simklId: String = "") {
+        com.launcher.tv.data.ApiKeys.save(getApplication(), traktId, traktSecret, tmdb, simklId)
         _state.update { it.copy(message = "Keys saved") }
     }
 
@@ -325,7 +348,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
     fun watchGame(event: SportsEvent, choice: ChannelCandidate? = null, startOver: Boolean = false) {
         viewModelScope.launch {
-            _state.update { it.copy(busy = "Tuning to ${event.title}…", picker = null) }
+            _state.update { it.copy(busy = if (startOver && event.finished) "Finding the recording of ${event.title}…" else "Tuning to ${event.title}…", picker = null) }
             val known = _state.value.channels[event.id]?.candidates
             val result = Watch.game(getApplication(), event, choice, startOver, interactive = true, known = known)
             _state.update { s ->
@@ -335,6 +358,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                         channels = s.channels + (event.id to ChannelLookup(candidates = result.candidates, at = System.currentTimeMillis())),
                     )
                     is Watch.Result.OpenedTiviMate -> s.copy(busy = null, message = result.why)
+                    is Watch.Result.Unavailable -> s.copy(busy = null, message = result.why)
                     is Watch.Result.Playing -> s.copy(busy = null)
                 }
             }
@@ -459,6 +483,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onResume() {
         refresh(force = false)
+        syncSimkl()
         reloadApps()
         refreshSystemState()
         refreshPhone()
@@ -487,7 +512,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(sleepMinutes = next, serviceRunning = HomeButtonService.running, message = msg) }
     }
 
-    fun refresh(force: Boolean, restart: Boolean = false) {
+    /** [simkl]: whether this refresh may ask Simkl for changes; Simkl wants syncs tied to you using the TV. */
+    fun refresh(force: Boolean, restart: Boolean = false, simkl: SimklSync = SimklSync.NONE) {
         if (refreshJob?.isActive == true) {
             if (!restart) return
             refreshJob?.cancel()
@@ -496,8 +522,25 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             cacheReady.await() // never refresh on top of an empty state and lose cached sections
             if (!force && !isStale()) return@launch
             _state.update { it.copy(refreshing = true) }
-            val data = repo.refresh(_state.value.data)
-            _state.update { it.copy(data = data, refreshing = false, trakt = currentTraktState()) }
+            val data = repo.refresh(_state.value.data, simkl)
+            _state.update { it.copy(data = data, refreshing = false, trakt = currentTraktState(), simkl = currentSimklState()) }
+        }
+    }
+
+    /** The refresh you ask for: also checks Simkl straight away. */
+    fun manualRefresh() = refresh(force = true, restart = true, simkl = SimklSync.NOW)
+
+    /** On coming back to the home screen: a cheap Simkl check (at most every 20 minutes), rows rebuilt only if something changed. */
+    private fun syncSimkl() {
+        if (!simklClient.isConfigured || !simklClient.isSignedIn) return
+        viewModelScope.launch {
+            val changed = try {
+                simklClient.sync(SimklSync.IF_DUE)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                false
+            }
+            if (changed) refresh(force = true, restart = true)
         }
     }
 
@@ -541,9 +584,56 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         _state.update {
             it.copy(
                 trakt = currentTraktState(),
-                data = it.data.copy(upNext = emptyList(), watchlist = emptyList(), upcomingEpisodes = emptyList()),
+                // Simkl's cards stay (without their Trakt ids); Trakt-only ones go.
+                data = it.data.copy(
+                    upNext = it.data.upNext.withoutTrakt(),
+                    watchlist = it.data.watchlist.withoutTrakt(),
+                    upcomingEpisodes = it.data.upcomingEpisodes.withoutTrakt(),
+                ),
             )
         }
+    }
+
+    private fun List<com.launcher.tv.data.MediaItem>.withoutTrakt() = filter { it.simklId != null }.map { it.copy(traktId = null) }
+
+    private var simklAuthJob: Job? = null
+
+    fun connectSimkl() {
+        if (!simklClient.isConfigured || simklAuthJob?.isActive == true) return
+        simklAuthJob = viewModelScope.launch {
+            try {
+                val code = simklClient.startDeviceAuth()
+                _state.update { it.copy(simkl = SimklState.AwaitingCode(code.userCode, code.verificationUri, code.verificationUriComplete)) }
+                val ok = simklClient.awaitDeviceToken(code)
+                _state.update {
+                    it.copy(simkl = currentSimklState(), message = if (ok) "Connected to Simkl" else "Simkl sign-in didn't complete")
+                }
+                if (ok) refresh(force = true, restart = true, simkl = SimklSync.NOW)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                val why = if (e is com.launcher.tv.data.HttpException && e.code == 401) "check the Simkl client ID (it must be a new, V2 app)" else e.message
+                _state.update { it.copy(simkl = currentSimklState(), message = "Couldn't connect to Simkl: $why") }
+            }
+        }
+    }
+
+    fun cancelSimklAuth() {
+        simklAuthJob?.cancel()
+        _state.update { it.copy(simkl = currentSimklState()) }
+    }
+
+    fun signOutSimkl() {
+        viewModelScope.launch {
+            simklClient.signOut()
+            _state.update { it.copy(simkl = currentSimklState(), message = "Disconnected from Simkl") }
+            refresh(force = true, restart = true)
+        }
+    }
+
+    private fun currentSimklState(): SimklState = when {
+        !simklClient.isConfigured -> SimklState.NotConfigured
+        simklClient.isSignedIn -> SimklState.SignedIn
+        else -> SimklState.SignedOut
     }
 
     fun launchPackage(pkg: String) {

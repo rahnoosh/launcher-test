@@ -78,7 +78,8 @@ class IptvLibrary private constructor(private val context: Context) {
         for (s in sources) {
             val hit = safe {
                 if (item.kind == MediaKind.MOVIE) s.findMovie(item.title, item.year, item.tmdbId)
-                else s.findEpisode(item.title, item.year, item.tmdbId, item.season ?: return@safe null, item.episode ?: return@safe null)
+                // Anime from Simkl is numbered per cour, with no season: providers list a cour as season 1.
+                else s.findEpisode(item.title, item.year, item.tmdbId, item.season ?: (if (item.anime) 1 else return@safe null), item.episode ?: return@safe null)
             }
             if (hit != null) return hit
         }

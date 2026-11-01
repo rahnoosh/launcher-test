@@ -222,7 +222,14 @@ private fun TileFace(tile: Tile) {
             }
             Tile.ConnectTrakt -> {
                 Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF5B1B7A), Color(0xFF1A0A24)))))
-                Text("Connect\nTrakt", Modifier.align(Alignment.Center), color = Accent, fontSize = (w * 0.15f).sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+                Text("Connect\nTrakt or\nSimkl", Modifier.align(Alignment.Center), color = Accent, fontSize = (w * 0.13f).sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+            }
+            is Tile.NowPlaying -> {
+                Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF1B4D7A), Color(0xFF0B1A2A)))))
+                Column(Modifier.align(Alignment.Center).padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("▶", color = Accent, fontSize = (w * 0.22f).sp)
+                    Text("Now playing", color = Color.White, fontSize = (w * 0.11f).sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                }
             }
             is Tile.Message -> {
                 Box(Modifier.fillMaxSize().background(Color(0xFF1C222B)))

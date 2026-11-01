@@ -56,6 +56,7 @@ object M3uParser {
                             epgId = info["tvg-id"]?.ifBlank { null },
                             logo = info["tvg-logo"]?.ifBlank { null },
                             archive = days > 0 || (catchup != null && catchup != "disabled"),
+                            archiveDays = days.takeIf { it > 0 },
                             url = url,
                             catchup = catchup,
                             catchupSource = info["catchup-source"]?.ifBlank { null },

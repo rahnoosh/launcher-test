@@ -109,10 +109,13 @@ fun RowsLayout(
             removeHistory = callbacks.removeFromHistory,
             launchApp = callbacks.launchPackage,
             showApps = { tab = HomeTab.APPS },
-            connectTrakt = callbacks.connectTrakt,
+            connectTrakt = { overlays.account = true },
             watchGame = { e, startOver -> callbacks.watchGame(e, null, startOver) },
             pickChannel = callbacks.openPicker,
             playMedia = callbacks.playMedia,
+            simklPage = { overlays.simklLink = it },
+            pipFullScreen = callbacks.pipFullScreen,
+            pipStop = callbacks.pipStop,
             openGame = callbacks.openGame,
             highlights = callbacks.highlights,
             revealScore = callbacks.revealScore,
@@ -228,7 +231,7 @@ private fun Billboard(tile: Tile, state: HomeUiState, modifier: Modifier) {
                 val i = tile.item
                 Eyebrow(
                     when (tile.role) {
-                        Tile.Role.UP_NEXT -> if (tile.isNew) "New episode · next up" else "Next up"
+                        Tile.Role.UP_NEXT -> if (tile.isNew) "New episode · next up" else "Next up · ${i.trackerLabel()}"
                         Tile.Role.UPCOMING -> "New episode · ${i.timeMillis?.let(::friendlyTime) ?: "soon"}"
                         Tile.Role.WATCHLIST -> "My watchlist"
                     }
@@ -255,6 +258,8 @@ private fun Billboard(tile: Tile, state: HomeUiState, modifier: Modifier) {
                 )
                 Hint(
                     when {
+                        e.finished && state.iptv && com.launcher.tv.player.Replay.offered(e, System.currentTimeMillis()) ->
+                            "OK  Highlights   ·   Hold OK  Game page, full game"
                         e.finished -> "OK  Highlights   ·   Hold OK  Game page"
                         state.iptv -> "OK  Watch   ·   Hold OK  Game page, best stream, start over"
                         else -> "OK  Open TiviMate   ·   Hold OK  Game page"
@@ -274,10 +279,16 @@ private fun Billboard(tile: Tile, state: HomeUiState, modifier: Modifier) {
                 Hint("OK  Edit teams")
             }
             Tile.ConnectTrakt -> {
-                Eyebrow("Trakt")
-                Title("Connect Trakt")
-                Overview("See your next episodes, new episodes and movie watchlist.")
+                Eyebrow("Trakt · Simkl")
+                Title("Connect Trakt or Simkl")
+                Overview("See your next episodes, new episodes and movie watchlist. Use either service, or both.")
                 Hint("OK  Connect")
+            }
+            is Tile.NowPlaying -> {
+                Eyebrow("Playing in a window")
+                Title(tile.title)
+                Overview("It keeps playing in the corner while you browse.")
+                Hint("OK  Full screen   ·   Hold OK  Stop")
             }
             is Tile.Message -> {
                 Title(tile.title)
@@ -381,7 +392,11 @@ private fun RowCardFace(tile: Tile) {
             }
             Tile.ConnectTrakt -> {
                 Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF5B1B7A), Color(0xFF1A0A24)))))
-                Text("Connect Trakt", Modifier.align(Alignment.Center), color = Accent, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Connect Trakt\nor Simkl", Modifier.align(Alignment.Center), color = Accent, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
+            is Tile.NowPlaying -> {
+                Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF1B4D7A), Color(0xFF0B1A2A)))))
+                Caption("▶  Now playing", tile.title, Modifier.align(Alignment.BottomStart).padding(bottom = 4.dp))
             }
             is Tile.Message -> {
                 Box(Modifier.fillMaxSize().background(Color(0xFF1C1C20)))
@@ -543,8 +558,13 @@ private fun OptionsSheet(tile: Tile, actions: HomeActions, onDismiss: () -> Unit
                     is Tile.Media -> {
                         if (tile.role != Tile.Role.UPCOMING) PillButton("Play", go { actions.playMedia(tile.item) }, primary = true, icon = R.drawable.ic_play)
                         PillButton("Open TiviMate", go(actions.openTiviMate))
+                        if (tile.item.simklUrl != null) PillButton("View on Simkl", go { actions.simklPage(tile.item) })
                     }
                     is Tile.App -> PillButton("Open", go { actions.launchApp(tile.app.packageName) }, primary = true)
+                    is Tile.NowPlaying -> {
+                        PillButton("Full screen", go(actions.pipFullScreen), primary = true, icon = R.drawable.ic_play)
+                        PillButton("Stop", go(actions.pipStop))
+                    }
                     else -> PillButton("Close", onDismiss, primary = true)
                 }
                 PillButton("Cancel", onDismiss)

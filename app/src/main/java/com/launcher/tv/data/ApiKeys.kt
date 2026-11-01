@@ -5,7 +5,7 @@ import com.launcher.tv.BuildConfig
 import com.launcher.tv.data.tmdb.Tmdb
 
 /**
- * Trakt and TMDB keys, entered on the TV or the phone page and stored only on the box.
+ * Trakt, Simkl and TMDB keys, entered on the TV or the phone page and stored only on the box.
  * Keeping them out of the APK means the builds published for self-update contain no secrets.
  * (A local build can still bake them in via local.properties; entered keys win.)
  */
@@ -18,16 +18,20 @@ object ApiKeys {
     fun traktId(c: Context): String = stored(c, "trakt_id") ?: BuildConfig.TRAKT_CLIENT_ID
     fun traktSecret(c: Context): String = stored(c, "trakt_secret") ?: BuildConfig.TRAKT_CLIENT_SECRET
     fun tmdb(c: Context): String = stored(c, "tmdb") ?: BuildConfig.TMDB_API_KEY
+    /** Simkl's device sign-in needs only the client id (no secret). */
+    fun simklId(c: Context): String = stored(c, "simkl_id").orEmpty()
 
     fun hasTrakt(c: Context) = traktId(c).isNotBlank() && traktSecret(c).isNotBlank()
     fun hasTmdb(c: Context) = tmdb(c).isNotBlank()
+    fun hasSimkl(c: Context) = simklId(c).isNotBlank()
 
     /** Blank or null values leave that key as it was. */
-    fun save(c: Context, traktId: String?, traktSecret: String?, tmdb: String?) {
+    fun save(c: Context, traktId: String?, traktSecret: String?, tmdb: String?, simklId: String? = null) {
         prefs(c).edit().apply {
             traktId?.trim()?.takeIf { it.isNotEmpty() }?.let { putString("trakt_id", it) }
             traktSecret?.trim()?.takeIf { it.isNotEmpty() }?.let { putString("trakt_secret", it) }
             tmdb?.trim()?.takeIf { it.isNotEmpty() }?.let { putString("tmdb", it) }
+            simklId?.trim()?.takeIf { it.isNotEmpty() }?.let { putString("simkl_id", it) }
         }.apply()
         Tmdb.apiKey = tmdb(c)
         ChangeBus.emit(CHANGED)

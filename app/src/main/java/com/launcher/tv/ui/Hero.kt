@@ -50,6 +50,11 @@ class HomeActions(
     val editTeams: () -> Unit = {},
     val compareProviders: (SportsEvent) -> Unit = {},
     val playMedia: (com.launcher.tv.data.MediaItem) -> Unit = {},
+    /** Shows a QR code for the title's Simkl page. */
+    val simklPage: (com.launcher.tv.data.MediaItem) -> Unit = {},
+    /** The picture-in-picture window: back to full screen, or stop it. */
+    val pipFullScreen: () -> Unit = {},
+    val pipStop: () -> Unit = {},
     /** IPTV login saved: Watch/Play go straight to the stream. */
     val iptv: Boolean = false,
 )
@@ -63,6 +68,7 @@ fun Tile.primaryAction(a: HomeActions): () -> Unit = when (this) {
     Tile.AllApps -> a.showApps
     Tile.ConnectTrakt -> a.connectTrakt
     Tile.EditTeams -> a.editTeams
+    is Tile.NowPlaying -> a.pipFullScreen
     is Tile.Message -> { {} }
 }
 
@@ -79,6 +85,7 @@ fun HeroBackground(tile: Tile?) {
             is Tile.Game -> GameBackground(tile.event)
             is Tile.App -> AppBackground(tile)
             Tile.ConnectTrakt -> GlowBackground(Color(0xFF5B1B7A))
+            is Tile.NowPlaying -> GlowBackground(Color(0xFF1B4D7A))
             else -> GlowBackground(Color(0xFF2B313D))
         }
     }
@@ -212,7 +219,7 @@ fun HeroContent(tile: Tile, actions: HomeActions, modifier: Modifier = Modifier,
                 val i = tile.item
                 Eyebrow(
                     when (tile.role) {
-                        Tile.Role.UP_NEXT -> if (tile.isNew) "New episode · next up" else "Next up · Trakt"
+                        Tile.Role.UP_NEXT -> if (tile.isNew) "New episode · next up" else "Next up · ${i.trackerLabel()}"
                         Tile.Role.UPCOMING -> "New episode · ${i.timeMillis?.let(::friendlyTime) ?: "soon"}"
                         Tile.Role.WATCHLIST -> "On your watchlist"
                     }
@@ -229,6 +236,7 @@ fun HeroContent(tile: Tile, actions: HomeActions, modifier: Modifier = Modifier,
                         }
                         else -> PillButton("Watch in TiviMate", actions.openTiviMate, primary = true, icon = R.drawable.ic_play)
                     }
+                    if (i.simklUrl != null) PillButton("Simkl", { actions.simklPage(i) })
                 }
             }
             is Tile.Game -> GameHero(tile.event, actions, channels)
@@ -249,10 +257,19 @@ fun HeroContent(tile: Tile, actions: HomeActions, modifier: Modifier = Modifier,
                 Buttons { PillButton("Edit teams", actions.editTeams, primary = true) }
             }
             Tile.ConnectTrakt -> {
-                Eyebrow("Trakt")
-                Title("Connect Trakt")
+                Eyebrow("Trakt · Simkl")
+                Title("Connect Trakt or Simkl")
                 Meta(listOf("See your next episodes, new episodes and movie watchlist"))
                 Buttons { PillButton("Connect", actions.connectTrakt, primary = true) }
+            }
+            is Tile.NowPlaying -> {
+                Eyebrow("Playing in a window")
+                Title(tile.title)
+                Meta(listOf("Keeps playing in the corner while you browse"))
+                Buttons {
+                    PillButton("Full screen", actions.pipFullScreen, primary = true, icon = R.drawable.ic_play)
+                    PillButton("Stop", actions.pipStop)
+                }
             }
             is Tile.Message -> {
                 Title(tile.title)
@@ -270,8 +287,12 @@ private fun GameHero(e: SportsEvent, actions: HomeActions, channels: ChannelLook
     val scoreHidden = home != null && (e.live || e.finished) && home.score == null && e.away?.score == null
     if (e.finished) {
         Meta(listOfNotNull("Final", e.broadcast, e.venue))
+        // With spoiler mode on you probably haven't seen it: the full game comes first.
+        val replay = actions.iptv && com.launcher.tv.player.Replay.offered(e, System.currentTimeMillis())
         Buttons {
-            PillButton("Highlights", { actions.highlights(e) }, primary = true, icon = R.drawable.ic_play)
+            if (replay && scoreHidden) PillButton("Watch full game", { actions.watchGame(e, true) }, primary = true, icon = R.drawable.ic_play)
+            PillButton("Highlights", { actions.highlights(e) }, primary = !(replay && scoreHidden), icon = if (replay && scoreHidden) null else R.drawable.ic_play)
+            if (replay && !scoreHidden) PillButton("Watch full game", { actions.watchGame(e, true) })
             if (scoreHidden) PillButton("Show score", { actions.revealScore(e) })
             PillButton("Game details", { actions.openGame(e) })
         }

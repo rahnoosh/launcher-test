@@ -76,6 +76,7 @@ class XtreamClient(context: Context, override val config: SourceConfig.Xtream) :
             IptvChannel(
                 config.id, it.streamId, it.name, cats[it.categoryId], it.epgChannelId?.ifBlank { null }, it.icon?.ifBlank { null },
                 it.hasArchive, number = it.num?.ifBlank { null },
+                archiveDays = it.archiveDays?.trim()?.toIntOrNull()?.takeIf { d -> d > 0 },
             )
         }
         mapped = channelCache.loadedAt to list

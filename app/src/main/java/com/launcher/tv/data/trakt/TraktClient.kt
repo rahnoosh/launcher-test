@@ -161,9 +161,11 @@ class TraktClient(context: Context) {
                         timeMillis = aired,
                         traktId = id,
                         tmdbId = ws.show.ids.tmdb,
+                        imdbId = ws.show.ids.imdb,
                         year = ws.show.year,
                         season = next.season,
                         episode = next.number,
+                        sortMillis = parseTime(ws.lastWatchedAt),
                     )
                 }
             }
@@ -186,7 +188,9 @@ class TraktClient(context: Context) {
                     overview = Tmdb.overview(Tmdb.Type.MOVIE, w.movie.ids.tmdb),
                     traktId = w.movie.ids.trakt,
                     tmdbId = w.movie.ids.tmdb,
+                    imdbId = w.movie.ids.imdb,
                     year = w.movie.year,
+                    sortMillis = parseTime(w.listedAt),
                 )
             }
         }.awaitAll()
@@ -210,6 +214,7 @@ class TraktClient(context: Context) {
                     timeMillis = parseTime(c.firstAired),
                     traktId = c.show.ids.trakt,
                     tmdbId = c.show.ids.tmdb,
+                    imdbId = c.show.ids.imdb,
                     year = c.show.year,
                     season = c.episode.season,
                     episode = c.episode.number,

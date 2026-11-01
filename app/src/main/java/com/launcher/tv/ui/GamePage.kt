@@ -36,6 +36,8 @@ import java.time.format.DateTimeFormatter
 class GameActions(
     val watch: () -> Unit = {},
     val startOver: () -> Unit = {},
+    /** A finished game, whole, from your provider's recordings. */
+    val replay: () -> Unit = {},
     val channels: () -> Unit = {},
     val highlights: () -> Unit = {},
     val revealScore: () -> Unit = {},
@@ -73,7 +75,13 @@ fun GamePageLayout(event: SportsEvent, detail: GameDetail?, loading: Boolean, ac
             )
             Buttons {
                 when {
-                    e.finished -> PillButton("Highlights", actions.highlights, primary = true, icon = R.drawable.ic_play)
+                    e.finished -> {
+                        // With spoiler mode on you probably haven't seen it: the full game comes first.
+                        val replay = actions.iptv && com.launcher.tv.player.Replay.offered(e, System.currentTimeMillis())
+                        if (replay && hideScores) PillButton("Watch full game", actions.replay, primary = true, icon = R.drawable.ic_play)
+                        PillButton("Highlights", actions.highlights, primary = !(replay && hideScores), icon = if (replay && hideScores) null else R.drawable.ic_play)
+                        if (replay && !hideScores) PillButton("Watch full game", actions.replay)
+                    }
                     actions.iptv -> {
                         PillButton(if (e.live) "Watch live" else "Watch", actions.watch, primary = true, icon = R.drawable.ic_play)
                         if (e.live) PillButton("Start over", actions.startOver)

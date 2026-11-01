@@ -126,7 +126,11 @@ class HomeButtonService : AccessibilityService() {
             }
         }
         if (event.keyCode != KeyEvent.KEYCODE_HOME) return false
-        if (event.action == KeyEvent.ACTION_UP) openHome()
+        if (event.action == KeyEvent.ACTION_UP) {
+            // Something HomeBase is playing keeps going in a corner window over the home screen.
+            if (com.launcher.tv.player.PlayerActivity.shrinkToWindow()) scope.launch { delay(400); openHome(clearTop = false) }
+            else openHome()
+        }
         return true
     }
 
@@ -151,6 +155,7 @@ class HomeButtonService : AccessibilityService() {
         scope.launch {
             when (val r = Watch.game(this@HomeButtonService, alert.event, interactive = false)) {
                 is Watch.Result.OpenedTiviMate -> r.why?.let { Toast.makeText(this@HomeButtonService, it, Toast.LENGTH_LONG).show() }
+                is Watch.Result.Unavailable -> Toast.makeText(this@HomeButtonService, r.why, Toast.LENGTH_LONG).show()
                 else -> Unit
             }
         }
@@ -162,13 +167,13 @@ class HomeButtonService : AccessibilityService() {
             private set
     }
 
-    private fun openHome() {
+    private fun openHome(clearTop: Boolean = true) {
         val now = System.currentTimeMillis()
         if (now - lastLaunch < 500) return // Home key + stock launcher event arrive together
         lastLaunch = now
         startActivity(
             Intent(this, MainActivity::class.java).addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or (if (clearTop) Intent.FLAG_ACTIVITY_CLEAR_TOP else 0)
             )
         )
     }

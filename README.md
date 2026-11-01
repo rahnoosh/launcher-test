@@ -5,13 +5,13 @@ A replacement home screen built around what you actually watch:
 | Row | Source |
 |---|---|
 | **Recently watched in TiviMate**: movies and episodes you played, with resume points | HomeBase player bridge |
-| **Continue watching**: next episode of every show you're on | Trakt |
-| **New episodes coming up**: the next 14 days of your shows | Trakt calendar |
+| **Continue watching**: next episode of every show you're on | Trakt and/or Simkl |
+| **New episodes coming up**: the next 14 days of your shows | Trakt calendar, Simkl calendar |
 | **Your teams**: Alabama Crimson Tide, Patriots, Lakers, Dodgers | ESPN public API |
 | **Fight night**: numbered UFC events + big boxing cards | ESPN (UFC), TheSportsDB (boxing) |
 | **NFL this week**: every game, with TV channel and live scores | ESPN |
 | **Formula 1**: next race weekends | Jolpica (Ergast) |
-| **Movie watchlist** | Trakt |
+| **Movie watchlist** | Trakt and/or Simkl |
 | **Apps**: TiviMate first, then all your other TV apps | Installed apps |
 
 Cards for shows, movies and games open **TiviMate**. Data is cached on the box, so Home opens instantly. It refreshes every 30 minutes, or every 2 minutes while one of your games is live.
@@ -23,6 +23,9 @@ Teams and leagues are chosen on the TV (Quick settings → Your teams) or on the
 1. **Trakt** (required for the TV/movie rows): https://trakt.tv/oauth/applications → *New application*.
    Name it anything and set the redirect URI to `urn:ietf:wg:oauth:2.0:oob`. Copy the Client ID and Client Secret.
 2. **TMDB** (optional, for artwork): https://www.themoviedb.org/settings/api → API Key.
+3. **Simkl** (optional, instead of or as well as Trakt): https://simkl.com/settings/developer → create a new app.
+   Choose the **TV, devices & command line** type (HomeBase signs in with a code, so it needs no redirect URI
+   and no secret). Copy the **Client ID**. It must be a new ("V2") app: older Simkl apps can't use device sign-in.
 
 You enter these **on the box**, either on the phone page (easiest) or in Quick settings → HomeBase → API keys.
 They're stored only on the box. They are **not** built into the APK: CI builds are published publicly for
@@ -68,9 +71,24 @@ adb shell settings put secure accessibility_enabled 1
 
 To undo it: *Settings → System → Accessibility → HomeBase Home button → Off*.
 
-## 5. Connect Trakt
+## 5. Connect Trakt and/or Simkl
 
-Open HomeBase, select **Connect Trakt**, then enter the on-screen code at `trakt.tv/activate` on your phone.
+Select the round account button at the top right (or **Connect Trakt or Simkl** on the home screen) to open
+**Accounts**, then:
+
+- **Trakt:** choose Connect and enter the on-screen code at `trakt.tv/activate` on your phone.
+- **Simkl:** choose Connect and scan the QR code with your phone, then choose **Allow**. (Or go to
+  `simkl.com/pin` and type the code.)
+
+Use either, or both. With both, each title gets one card: if a show is on both, the next episode comes from
+whichever you watched it on more recently. Whatever you watch in HomeBase's player is reported to both.
+
+**How often HomeBase talks to Simkl.** Simkl limits apps (free accounts get 500 requests a day) and asks them
+not to check on a timer. So HomeBase keeps a copy of your Simkl lists on the box. It asks Simkl what's changed
+when you come back to the home screen (at most every 20 minutes), right after you've watched something in
+HomeBase, or when you press refresh. Upcoming episodes come from Simkl's public calendar files, which don't
+count against the limit. On a title from Simkl, **View on Simkl** (hold OK, or the Simkl button) shows a QR
+code for its Simkl page.
 
 ## 6. Record what you watch in TiviMate (player bridge)
 
@@ -136,6 +154,21 @@ After that:
   opens a YouTube search ("New England Patriots vs Buffalo Bills highlights", "F1 São Paulo Grand Prix 2026
   highlights").
 - The *Final* alert card now opens the game page.
+- **Watch full game:** for up to two weeks after a game, HomeBase can play it from the start using your
+  provider's catch-up recordings (what TiviMate calls the archive). Use the button on the game page, in the
+  console layout, or on the phone page. It picks a channel that showed the game and keeps recordings that long,
+  starts a few minutes before kickoff, and asks for about the length of the sport (4 hours for football and
+  baseball, 3 for basketball and hockey, 2½ for soccer and F1, 5½ for fight cards). With spoiler mode on, it's
+  the first button and nothing on the page gives the result away. Stop partway and it's in Continue Watching
+  with your place saved. Replays are never reported to Trakt or Simkl.
+
+## 8c. Picture-in-picture
+
+While HomeBase's player is showing a game or channel that HomeBase started, press **Back** (or **Home**) and
+it shrinks into a window in the corner, still playing, while you browse. Next episodes and movies started from
+HomeBase shrink on **Home**; Back closes them as before. A **Now Playing** card at the top of the home screen
+takes it back to full screen (OK) or stops it (hold OK). Starting something else replaces what's in the
+window. Things you play from TiviMate through the player bridge aren't affected: Back returns to TiviMate.
 
 ## 8a. Spoiler mode, best stream, and TiviMate
 
@@ -301,7 +334,8 @@ put back the component that was there before. You can see it first with
 
 
 - **Player bridge:** this needs TiviMate to pass the title to the external player. If it only passes the stream
-  URL, history still works but Trakt scrobbling can't identify the video. Streams ExoPlayer can't decode (rare codecs
+  URL, history still works but Trakt and Simkl can't identify the video. (With Trakt connected, HomeBase asks
+  Trakt; with only Simkl, it asks Simkl's file-name matcher.) Streams ExoPlayer can't decode (rare codecs
   such as DTS audio) show an error; use TiviMate's own player for those.
 - **UFC PPVs:** from 2026 the numbered UFC events stream on Paramount+ rather than as pay-per-view.
   HomeBase shows every numbered event (`UFC 3xx`), which are the cards that used to be PPV.

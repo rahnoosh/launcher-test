@@ -51,6 +51,7 @@ class GameActivity : ComponentActivity() {
         val actions = GameActions(
             watch = { watch(event, null, false) },
             startOver = { watch(event, null, true) },
+            replay = { watch(event, null, true) },
             channels = {
                 picker = ChannelLookup(loading = true)
                 lifecycleScope.launch {
@@ -103,6 +104,7 @@ class GameActivity : ComponentActivity() {
             when (val r = Watch.game(this@GameActivity, event, choice, startOver, interactive = true)) {
                 is Watch.Result.Choose -> picker = ChannelLookup(candidates = r.candidates)
                 is Watch.Result.OpenedTiviMate -> r.why?.let(::toast)
+                is Watch.Result.Unavailable -> toast(r.why)
                 is Watch.Result.Playing -> Unit
             }
         }

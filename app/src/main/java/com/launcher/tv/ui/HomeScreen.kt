@@ -48,6 +48,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -95,6 +96,9 @@ class HomeCallbacks(
     val connectTrakt: () -> Unit = {},
     val cancelTraktAuth: () -> Unit = {},
     val signOutTrakt: () -> Unit = {},
+    val connectSimkl: () -> Unit = {},
+    val cancelSimklAuth: () -> Unit = {},
+    val signOutSimkl: () -> Unit = {},
     val launchPackage: (String) -> Unit = {},
     val removeFromHistory: (HistoryEntry) -> Unit = {},
     val play: (HistoryEntry) -> Unit = {},
@@ -130,7 +134,11 @@ class HomeCallbacks(
     val newPhonePin: () -> Unit = {},
     val togglePhonePage: () -> Unit = {},
     val updateAction: () -> Unit = {},
-    val saveKeys: (String, String, String) -> Unit = { _, _, _ -> },
+    /** The picture-in-picture window: back to full screen, or stop it. */
+    val pipFullScreen: () -> Unit = {},
+    val pipStop: () -> Unit = {},
+    /** Trakt client id, Trakt secret, TMDB key, Simkl client id (blank keeps what's saved). */
+    val saveKeys: (String, String, String, String) -> Unit = { _, _, _, _ -> },
 )
 
 @Composable
@@ -147,10 +155,15 @@ fun HomeScreen(vm: HomeViewModel) {
 
     val callbacks = remember(vm) {
         HomeCallbacks(
-            refresh = { vm.refresh(force = true) },
+            refresh = vm::manualRefresh,
             connectTrakt = vm::connectTrakt,
             cancelTraktAuth = vm::cancelTraktAuth,
             signOutTrakt = vm::signOutTrakt,
+            connectSimkl = vm::connectSimkl,
+            cancelSimklAuth = vm::cancelSimklAuth,
+            signOutSimkl = vm::signOutSimkl,
+            pipFullScreen = { com.launcher.tv.player.PlayerActivity.fullScreen(context) },
+            pipStop = { com.launcher.tv.player.PlayerActivity.stopWindow() },
             launchPackage = vm::launchPackage,
             removeFromHistory = vm::removeFromHistory,
             play = { context.startActivity(PlayerActivity.intent(context, it)) },
@@ -235,10 +248,13 @@ fun HomeLayout(
             removeHistory = callbacks.removeFromHistory,
             launchApp = callbacks.launchPackage,
             showApps = { tab = HomeTab.APPS },
-            connectTrakt = callbacks.connectTrakt,
+            connectTrakt = { overlays.account = true },
             watchGame = { e, startOver -> callbacks.watchGame(e, null, startOver) },
             pickChannel = callbacks.openPicker,
             playMedia = callbacks.playMedia,
+            simklPage = { overlays.simklLink = it },
+            pipFullScreen = callbacks.pipFullScreen,
+            pipStop = callbacks.pipStop,
             openGame = callbacks.openGame,
             highlights = callbacks.highlights,
             revealScore = callbacks.revealScore,
@@ -289,7 +305,7 @@ fun HomeLayout(
                 onTab = { tab = it },
                 state = state,
                 onRefresh = callbacks.refresh,
-                onAccount = { if (state.trakt == TraktState.SignedIn) overlays.account = true else callbacks.connectTrakt() },
+                onAccount = { overlays.account = true },
                 onSettings = { callbacks.refreshSystemState(); overlays.quick = true },
             )
 
@@ -417,7 +433,8 @@ private fun TopBar(
                 Modifier.size(22.dp).background(Brush.linearGradient(listOf(Accent, Color(0xFFB23A1C))), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(if (state.trakt == TraktState.SignedIn) "T" else "+", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                val badge = (if (state.trakt == TraktState.SignedIn) "T" else "") + (if (state.simkl == SimklState.SignedIn) "S" else "")
+                Text(badge.ifEmpty { "+" }, color = Color.White, fontSize = if (badge.length > 1) 8.sp else 10.sp, fontWeight = FontWeight.Bold)
             }
         }
         Spacer(Modifier.width(16.dp))
@@ -460,19 +477,99 @@ private fun TraktCodeDialog(s: TraktState.AwaitingCode, onCancel: () -> Unit) {
     }
 }
 
+/** Trakt and Simkl: connect either, or both. */
 @Composable
-private fun AccountDialog(onSignOut: () -> Unit, onDismiss: () -> Unit) {
+private fun AccountsDialog(state: HomeUiState, callbacks: HomeCallbacks, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.width(440.dp).background(Color(0xFF1C222B), RoundedCornerShape(16.dp)).padding(28.dp)) {
+            Text("Accounts", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("Next up, new episodes and your watchlist come from these. Use one or both.", color = Dim, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            AccountRow(
+                "Trakt",
+                when (state.trakt) {
+                    TraktState.SignedIn -> "Connected"
+                    TraktState.NotConfigured -> "Needs a Trakt client ID and secret (Settings → API keys or the phone page)"
+                    else -> "Not connected"
+                },
+            ) {
+                when (state.trakt) {
+                    TraktState.SignedIn -> PillButton("Sign out", { callbacks.signOutTrakt() })
+                    TraktState.NotConfigured -> Unit
+                    else -> PillButton("Connect", { onDismiss(); callbacks.connectTrakt() }, primary = true)
+                }
+            }
+            AccountRow(
+                "Simkl",
+                when (state.simkl) {
+                    SimklState.SignedIn -> "Connected"
+                    SimklState.NotConfigured -> "Needs a Simkl client ID (Settings → API keys or the phone page)"
+                    else -> "Not connected"
+                },
+            ) {
+                when (state.simkl) {
+                    SimklState.SignedIn -> PillButton("Disconnect", { callbacks.signOutSimkl() })
+                    SimklState.NotConfigured -> Unit
+                    else -> PillButton("Connect", { onDismiss(); callbacks.connectSimkl() }, primary = state.trakt == TraktState.SignedIn)
+                }
+            }
+            Row(Modifier.padding(top = 20.dp)) { PillButton("Close", onDismiss) }
+        }
+    }
+}
+
+@Composable
+private fun AccountRow(name: String, status: String, buttons: @Composable () -> Unit) {
+    Row(Modifier.padding(top = 16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(status, color = Dim, fontSize = 11.sp)
+        }
+        buttons()
+    }
+}
+
+/** Simkl's sign-in, as Simkl recommends for TVs: a QR code that opens the approval page with the code filled in. */
+@Composable
+private fun SimklCodeDialog(s: SimklState.AwaitingCode, onCancel: () -> Unit) {
+    Dialog(onDismissRequest = onCancel) { SimklCodePanel(s, onCancel) }
+}
+
+@Composable
+fun SimklCodePanel(s: SimklState.AwaitingCode, onCancel: () -> Unit) {
+    val qr = remember(s.qrUrl) { qrBitmap(s.qrUrl, 480).asImageBitmap() }
+    Row(
+        Modifier.background(Color(0xFF1C222B), RoundedCornerShape(16.dp)).padding(32.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(200.dp).background(Color.White, RoundedCornerShape(12.dp)).padding(10.dp)) {
+            androidx.compose.foundation.Image(qr, "QR code for Simkl sign-in", Modifier.fillMaxSize())
+        }
+        Column(Modifier.padding(start = 28.dp).width(300.dp)) {
+            Text("Connect Simkl", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text("Scan with your phone and choose Allow.", color = Color(0xFFCCCCCC), modifier = Modifier.padding(top = 10.dp))
+            Text("Or go to ${s.url.removePrefix("https://")} and enter:", color = Dim, fontSize = 13.sp, modifier = Modifier.padding(top = 14.dp))
+            Text(s.userCode, color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
+            Box(Modifier.padding(top = 18.dp)) { PillButton("Cancel", onCancel) }
+        }
+    }
+}
+
+/** A link you can't click on a TV: shown as a QR code for your phone. */
+@Composable
+private fun LinkQrDialog(title: String, note: String, url: String, onDismiss: () -> Unit) {
+    val qr = remember(url) { qrBitmap(url, 420).asImageBitmap() }
     Dialog(onDismissRequest = onDismiss) {
         Column(
             Modifier.background(Color(0xFF1C222B), RoundedCornerShape(16.dp)).padding(28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("Trakt", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text("You're connected.", color = Dim, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-            Row(Modifier.padding(top = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PillButton("Close", onDismiss, primary = true)
-                PillButton("Sign out", onSignOut)
+            Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(note, color = Dim, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp, bottom = 14.dp))
+            Box(Modifier.size(180.dp).background(Color.White, RoundedCornerShape(12.dp)).padding(10.dp)) {
+                androidx.compose.foundation.Image(qr, "QR code", Modifier.fillMaxSize())
             }
+            Text(url.removePrefix("https://"), color = Dim, fontSize = 11.sp, modifier = Modifier.padding(top = 10.dp))
+            Box(Modifier.padding(top = 16.dp)) { PillButton("Close", onDismiss, primary = true) }
         }
     }
 }
@@ -541,14 +638,29 @@ private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXt
             }
             SettingsSection(
                 "API keys",
-                "Trakt: " + (if (state.keys.first) "set" else "not set") + "  ·  TMDB artwork: " + (if (state.keys.second) "set" else "not set") +
+                "Trakt: " + (if (state.keys.first) "set" else "not set") + "  ·  Simkl: " + (if (state.simklKey) "set" else "not set") +
+                    "  ·  TMDB artwork: " + (if (state.keys.second) "set" else "not set") +
                     ". Stored only on this box. Easier to type on the phone page.",
             ) {
-                PillButton("Enter keys", { showKeysForm(context) { id, secret, tmdb -> callbacks.saveKeys(id, secret, tmdb) } })
+                PillButton("Enter keys", { showKeysForm(context) { id, secret, tmdb, simkl -> callbacks.saveKeys(id, secret, tmdb, simkl) } })
             }
             SettingsSection("Trakt", if (state.trakt == TraktState.SignedIn) "Connected" else "Not connected") {
                 if (state.trakt == TraktState.SignedIn) PillButton("Sign out", callbacks.signOutTrakt)
                 else PillButton("Connect", callbacks.connectTrakt)
+            }
+            SettingsSection(
+                "Simkl",
+                when (state.simkl) {
+                    SimklState.SignedIn -> "Connected. Checks Simkl for changes when you come back to the home screen."
+                    SimklState.NotConfigured -> "Add a Simkl client ID under API keys first"
+                    else -> "Not connected. Works alongside Trakt, or on its own."
+                },
+            ) {
+                when (state.simkl) {
+                    SimklState.SignedIn -> PillButton("Disconnect", callbacks.signOutSimkl)
+                    SimklState.NotConfigured -> Unit
+                    else -> PillButton("Connect", callbacks.connectSimkl)
+                }
             }
             SettingsSection("System", "Wi-Fi, display, inputs, accounts") {
                 PillButton("Android settings", callbacks.openAndroidSettings)
@@ -611,8 +723,8 @@ internal fun ChannelPicker(event: SportsEvent, lookup: ChannelLookup?, onPick: (
     }
 }
 
-/** Trakt client id/secret and TMDB key; blank fields keep what's saved. */
-private fun showKeysForm(context: android.content.Context, onSave: (String, String, String) -> Unit) {
+/** Trakt client id/secret, TMDB key and Simkl client id; blank fields keep what's saved. */
+private fun showKeysForm(context: android.content.Context, onSave: (String, String, String, String) -> Unit) {
     val pad = (20 * context.resources.displayMetrics.density).toInt()
     fun field(hint: String) = EditText(context).apply {
         this.hint = hint
@@ -622,16 +734,17 @@ private fun showKeysForm(context: android.content.Context, onSave: (String, Stri
     val id = field("Trakt Client ID")
     val secret = field("Trakt Client Secret")
     val tmdb = field("TMDB API key (optional, for artwork)")
+    val simkl = field("Simkl Client ID (optional)")
     val layout = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(pad, pad / 2, pad, 0)
-        addView(id); addView(secret); addView(tmdb)
+        addView(id); addView(secret); addView(tmdb); addView(simkl)
     }
     AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Dialog_Alert)
         .setTitle("API keys")
-        .setMessage("From trakt.tv/oauth/applications and themoviedb.org/settings/api. Leave a field empty to keep what's saved.")
+        .setMessage("From trakt.tv/oauth/applications, themoviedb.org/settings/api and simkl.com/settings/developer. Leave a field empty to keep what's saved.")
         .setView(layout)
-        .setPositiveButton("Save") { _, _ -> onSave(id.text.toString(), secret.text.toString(), tmdb.text.toString()) }
+        .setPositiveButton("Save") { _, _ -> onSave(id.text.toString(), secret.text.toString(), tmdb.text.toString(), simkl.text.toString()) }
         .setNegativeButton("Cancel", null)
         .show()
 }
@@ -692,6 +805,8 @@ class OverlayState(quick: Boolean = false) {
     var phone by mutableStateOf(false)
     var settings by mutableStateOf(false)
     var account by mutableStateOf(false)
+    /** A title whose Simkl page is shown as a QR code. */
+    var simklLink by mutableStateOf<MediaItem?>(null)
 }
 
 /** Dialogs and panels on top of the home screen (both layouts). */
@@ -699,7 +814,16 @@ class OverlayState(quick: Boolean = false) {
 fun BoxScope.HomeOverlays(state: HomeUiState, callbacks: HomeCallbacks, o: OverlayState) {
     val context = LocalContext.current
     (state.trakt as? TraktState.AwaitingCode)?.let { TraktCodeDialog(it, callbacks.cancelTraktAuth) }
-    if (o.account) AccountDialog(onSignOut = { callbacks.signOutTrakt(); o.account = false }, onDismiss = { o.account = false })
+    (state.simkl as? SimklState.AwaitingCode)?.let { SimklCodeDialog(it, callbacks.cancelSimklAuth) }
+    if (o.account) AccountsDialog(state, callbacks, onDismiss = { o.account = false })
+    o.simklLink?.let { item ->
+        LinkQrDialog(
+            title = item.title,
+            note = "Scan to open it on Simkl",
+            url = item.simklUrl ?: "https://simkl.com",
+            onDismiss = { o.simklLink = null },
+        )
+    }
     if (o.quick) {
         ControlCenter(
             sleepMinutesLeft = state.sleepMinutes,

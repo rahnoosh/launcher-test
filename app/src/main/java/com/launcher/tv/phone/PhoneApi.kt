@@ -154,7 +154,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
                 message(msg ?: "Look at the TV: Android is asking to install the update.")
             }
             "POST" to "/api/keys" -> {
-                com.launcher.tv.data.ApiKeys.save(app, b["traktId"].string(), b["traktSecret"].string(), b["tmdb"].string())
+                com.launcher.tv.data.ApiKeys.save(app, b["traktId"].string(), b["traktSecret"].string(), b["tmdb"].string(), b["simklId"].string())
                 ok(state())
             }
             "GET" to "/api/backup" -> Response.json(
@@ -182,6 +182,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
             putJsonObject("keys") {
                 put("trakt", com.launcher.tv.data.ApiKeys.hasTrakt(app))
                 put("tmdb", com.launcher.tv.data.ApiKeys.hasTmdb(app))
+                put("simkl", com.launcher.tv.data.ApiKeys.hasSimkl(app))
             }
             putJsonArray("events") {
                 EventFollow.entries.forEach { e -> addJsonObject { put("key", e.key); put("label", e.label); put("on", follow.follows(e)) } }
@@ -263,6 +264,8 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
                 games.forEach { e ->
                     addJsonObject {
                         put("ref", remember(e)); put("kind", "game"); put("title", e.title)
+                        // A finished game plays whole from your provider's recordings.
+                        put("finished", e.finished)
                         put("subtitle", listOfNotNull(e.league, gameWhen(e), e.broadcast).joinToString(" · "))
                     }
                 }
@@ -270,6 +273,8 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
                     addJsonObject {
                         put("ref", remember(m)); put("kind", if (m.kind == MediaKind.MOVIE) "movie" else "show"); put("title", m.title)
                         put("subtitle", listOf(label, m.subtitle).filter { it.isNotBlank() }.joinToString(" · "))
+                        // Simkl asks apps to link each title back to its Simkl page.
+                        m.simklUrl?.takeIf { it.startsWith("https://simkl.com/") }?.let { put("simklUrl", it) }
                     }
                 }
                 channels.forEach { c ->
@@ -316,9 +321,10 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
                     } else {
                         AppsRepository(app).launch(AppsRepository.TIVIMATE); "Opened TiviMate (no matching channel found)"
                     }
-                } else when (val r = Watch.game(app, o, interactive = false)) {
+                } else when (val r = Watch.game(app, o, startOver = o.finished, interactive = false)) {
                     is Watch.Result.Playing -> "Playing on the TV: ${r.what}"
                     is Watch.Result.OpenedTiviMate -> r.why ?: "Opened TiviMate"
+                    is Watch.Result.Unavailable -> r.why
                     is Watch.Result.Choose -> "Choose a channel on the TV"
                 }
                 is MediaItem -> if (tivimate) {
@@ -326,6 +332,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
                 } else when (val r = Watch.media(app, o)) {
                     is Watch.Result.Playing -> "Playing on the TV: ${r.what}"
                     is Watch.Result.OpenedTiviMate -> r.why ?: "Opened TiviMate"
+                    is Watch.Result.Unavailable -> r.why
                     is Watch.Result.Choose -> "Choose on the TV"
                 }
                 is IptvChannel -> if (tivimate) {
@@ -338,7 +345,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
                 is Playable -> if (tivimate) {
                     AppsRepository(app).launch(AppsRepository.TIVIMATE); "Opened TiviMate"
                 } else {
-                    val intent = PlayerActivity.movieIntent(app, o.url, o.title, null, null, null)
+                    val intent = PlayerActivity.movieIntent(app, o.url, o.title, null, null)
                     if (o.headers.isNotEmpty()) intent.putExtra("headers", o.headers.flatMap { listOf(it.key, it.value) }.toTypedArray())
                     app.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     "Playing ${o.title} on the TV"

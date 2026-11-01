@@ -57,9 +57,12 @@ class HomeScreenshotTest {
     @Test fun rowsLiveGame() = rows(HomeTab.FOR_YOU, "g-espn-lal")
     @Test fun rowsSports() = rows(HomeTab.SPORTS, "g-espn-ne")
     @Test fun rowsRailOpen() = rows(HomeTab.FOR_YOU, null, railOpen = true)
+    /** A game shrunk into the picture-in-picture window: Now Playing card on top. */
+    @Test fun rowsNowPlaying() = rows(HomeTab.FOR_YOU, "now-playing", pip = "Patriots @ Bills · ESPN")
 
-    private fun rows(tab: HomeTab, selected: String?, railOpen: Boolean = false) {
+    private fun rows(tab: HomeTab, selected: String?, railOpen: Boolean = false, pip: String? = null) {
         val state = sampleState().copy(
+            pip = pip,
             data = sampleState().data.let { d ->
                 d.copy(
                     upNext = d.upNext.map { it.copy(overview = "Mark leads a team of office workers whose memories have been surgically divided between their work and personal lives.") },
@@ -114,6 +117,15 @@ class HomeScreenshotTest {
         val detail = json?.let { GameDetails.parseSummary(Json.parseToJsonElement(it).jsonObject, "NFL") }
         val ev = sampleState().data.myTeams.first { it.id == "espn-ne" }.copy(live = true, status = "14-10 Q3 4:12")
         paparazzi.snapshot { HomeBaseTheme { GamePageLayout(ev, detail, loading = false, actions = GameActions(iptv = true)) } }
+    }
+
+    /** Yesterday's game, unseen, spoiler mode on: Watch full game comes first. */
+    @Test fun gamePageReplay() {
+        val json = javaClass.classLoader!!.getResource("nfl_summary.json")?.readText()
+        val detail = json?.let { GameDetails.parseSummary(Json.parseToJsonElement(it).jsonObject, "NFL") }
+        val ev = sampleState().data.myTeams.first { it.id == "espn-ne" }
+            .copy(live = false, finished = true, status = null, startMillis = System.currentTimeMillis() - 26 * 3_600_000L)
+        paparazzi.snapshot { HomeBaseTheme { GamePageLayout(ev, detail, loading = false, actions = GameActions(iptv = true), hideScores = true) } }
     }
 
     @Test fun gamePageF1() {
@@ -187,6 +199,19 @@ class HomeScreenshotTest {
                     androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF0B0E14)),
                     contentAlignment = androidx.compose.ui.Alignment.Center,
                 ) { PhonePanelContent(info, {}, {}, {}) }
+            }
+        }
+    }
+
+    /** Simkl sign-in: a QR code that opens the approval page with the code filled in. */
+    @Test fun simklSignIn() {
+        val s = SimklState.AwaitingCode("BDWP-HQPK", "https://simkl.com/pin", "https://simkl.com/pin?user_code=BDWP-HQPK")
+        paparazzi.snapshot {
+            HomeBaseTheme {
+                androidx.compose.foundation.layout.Box(
+                    androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF0B0E14)),
+                    contentAlignment = androidx.compose.ui.Alignment.Center,
+                ) { SimklCodePanel(s) {} }
             }
         }
     }

@@ -57,6 +57,7 @@
   .result { flex-wrap:wrap; }
   .result .grow { flex-basis:100%; }
   .result .actions { justify-content:flex-start; }
+  a.link { display:inline-flex; align-items:center; background:none; color:var(--dim); text-decoration:none; border:1px solid var(--line); border-radius:999px; padding:6px 11px; font-size:13px; font-weight:600; }
 </style>
 </head>
 <body>
@@ -135,6 +136,7 @@
       <label>Trakt Client ID</label><input id="kTraktId" autocapitalize="off" autocorrect="off" placeholder="from trakt.tv/oauth/applications">
       <label>Trakt Client Secret</label><input id="kTraktSecret" type="password" autocapitalize="off" autocorrect="off">
       <label>TMDB API key (optional, for artwork)</label><input id="kTmdb" type="password" autocapitalize="off" autocorrect="off" placeholder="from themoviedb.org/settings/api">
+      <label>Simkl Client ID (optional, to use Simkl too)</label><input id="kSimkl" autocapitalize="off" autocorrect="off" placeholder="from simkl.com/settings/developer">
       <p><button class="btn primary" id="kSave">Save keys</button></p>
       <p class="muted">Saved only on the TV box; this page never shows them again. Empty fields keep what's saved.</p>
     </div>
@@ -263,7 +265,7 @@ function render() {
   );
   $("#layout").value = s.layout;
   const k = state.keys || {};
-  $("#keyStatus").textContent = "Trakt: " + (k.trakt ? "set" : "not set") + "  ·  TMDB: " + (k.tmdb ? "set" : "not set");
+  $("#keyStatus").textContent = "Trakt: " + (k.trakt ? "set" : "not set") + "  ·  Simkl: " + (k.simkl ? "set" : "not set") + "  ·  TMDB: " + (k.tmdb ? "set" : "not set");
   const sl = $("#sleep");
   sl.value = [...sl.options].some(o => o.value === String(s.sleepMinutes)) ? String(s.sleepMinutes) : (s.sleepMinutes ? sl.value : "0");
 }
@@ -338,8 +340,9 @@ async function search() {
     r.results.forEach((x) => box.append(el("div", { class: "row result" },
       el("div", { class: "grow" }, el("div", { class: "kind", text: kinds[x.kind] || x.kind }), el("div", { class: "title", text: x.title }), el("div", { class: "sub", text: x.subtitle || "" })),
       el("div", { class: "actions" },
-        el("button", { class: "btn small primary", text: x.kind === "game" || x.kind === "channel" ? "Watch on TV" : "Play on TV", onclick: (e) => play(e.target, x.ref, "watch") }),
-        el("button", { class: "btn small", text: "TiviMate", onclick: (e) => play(e.target, x.ref, "tivimate") })))));
+        el("button", { class: "btn small primary", text: x.kind === "game" ? (x.finished ? "Watch full game" : "Watch on TV") : x.kind === "channel" ? "Watch on TV" : "Play on TV", onclick: (e) => play(e.target, x.ref, "watch") }),
+        el("button", { class: "btn small", text: "TiviMate", onclick: (e) => play(e.target, x.ref, "tivimate") }),
+        x.simklUrl && x.simklUrl.startsWith("https://simkl.com/") ? el("a", { class: "btn small link", href: x.simklUrl, target: "_blank", rel: "noopener", text: "Simkl page" }) : null))));
   } catch (e) { toast(e.message); }
 }
 function play(btn, ref, action) { run(btn, async () => { const r = await api("/api/play", { ref, action }); toast(r.message); }); }
@@ -349,8 +352,8 @@ $("#updateInstall").onclick = (e) => run(e.target, async () => { const r = await
 $("#checkUpdate").onclick = (e) => run(e.target, async () => { state.update = await api("/api/update/check", {}); render(); toast(state.update.available ? "Update available" : "Up to date"); });
 $("#backup").onclick = () => { window.location.href = "/api/backup" + ($("#backupLogins").checked ? "?logins=1" : ""); };
 $("#kSave").onclick = (e) => run(e.target, async () => {
-  state = await api("/api/keys", { traktId: $("#kTraktId").value, traktSecret: $("#kTraktSecret").value, tmdb: $("#kTmdb").value });
-  ["#kTraktId", "#kTraktSecret", "#kTmdb"].forEach((id) => $(id).value = "");
+  state = await api("/api/keys", { traktId: $("#kTraktId").value, traktSecret: $("#kTraktSecret").value, tmdb: $("#kTmdb").value, simklId: $("#kSimkl").value });
+  ["#kTraktId", "#kTraktSecret", "#kTmdb", "#kSimkl"].forEach((id) => $(id).value = "");
   render(); toast("Keys saved on the TV");
 });
 $("#restoreBtn").onclick = () => $("#restoreFile").click();

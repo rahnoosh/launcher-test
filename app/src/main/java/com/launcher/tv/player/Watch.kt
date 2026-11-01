@@ -17,9 +17,12 @@ object Watch {
         /** Several plausible channels and nothing remembered: let the user pick. */
         data class Choose(val candidates: List<ChannelCandidate>) : Result
         data class OpenedTiviMate(val why: String?) : Result
+        /** Nothing to play, e.g. no channel kept a recording of the game. */
+        data class Unavailable(val why: String) : Result
     }
 
     /**
+     * @param startOver live game: from kickoff; finished game: the whole game, from your provider's recordings.
      * @param interactive false from the alert pop-up: no picker there, so the best channel just plays.
      */
     suspend fun game(
@@ -38,6 +41,9 @@ object Watch {
             if (e is kotlinx.coroutines.CancellationException) throw e
             return tivimate(context, "Couldn't load your channels (${e.message})")
         }
+        val now = System.currentTimeMillis()
+        if (startOver && event.finished) return replay(context, library, event, choice, candidates, now)
+
         val best = candidates.firstOrNull() ?: return if (interactive) Result.Choose(emptyList())
         else tivimate(context, "No channel found for ${event.title}")
 
@@ -46,7 +52,6 @@ object Watch {
         if (choice != null) ChannelFinder(context, library).remember(event, choice.channel)
 
         val ch = best.channel
-        val now = System.currentTimeMillis()
         val url = (if (startOver && event.startMillis < now) {
             val from = event.startMillis - 5 * 60_000L
             library.catchupUrl(ch, from, ((now - from) / 60_000L + 240).toInt())
@@ -55,6 +60,32 @@ object Watch {
             PlayerActivity.liveIntent(context, url, "${event.title} · ${ch.name}", event.id, library.headers(ch)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
         return Result.Playing(ch.name)
+    }
+
+    /** A finished game, whole, from a channel that kept a recording of it. Never asks: only plausible channels qualify. */
+    private fun replay(
+        context: Context,
+        library: IptvLibrary,
+        event: SportsEvent,
+        choice: ChannelCandidate?,
+        candidates: List<ChannelCandidate>,
+        now: Long,
+    ): Result {
+        val withRecording = candidates.filter { Replay.channelHasIt(it.channel, event, now) }
+        val best = withRecording.firstOrNull()?.takeIf { it === choice || it.score >= 45 }
+            ?: return Result.Unavailable(
+                when {
+                    candidates.isEmpty() -> "No channel found for ${event.title}"
+                    withRecording.isEmpty() -> "None of your channels that showed ${event.title} still have a recording of it"
+                    else -> "Couldn't tell which channel showed ${event.title}"
+                }
+            )
+        val (from, minutes) = Replay.window(event, now) ?: return Result.Unavailable("${event.title} isn't recorded yet")
+        val url = library.catchupUrl(best.channel, from, minutes) ?: return Result.Unavailable("${best.channel.name} can't play recordings")
+        context.startActivity(
+            PlayerActivity.replayIntent(context, url, "${event.title} · full game", library.headers(best.channel)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+        return Result.Playing("${event.title} from the start")
     }
 
     /** Next-up episode or watchlist movie from your providers' catalogues. */
@@ -68,11 +99,7 @@ object Watch {
             return tivimate(context, "Couldn't search your providers (${e.message})")
         } ?: return tivimate(context, "${item.title} isn't in your providers' catalogues")
 
-        val intent = if (item.kind == MediaKind.MOVIE) {
-            PlayerActivity.movieIntent(context, found.url, found.title, item.traktId, item.imageUrl, item.posterUrl)
-        } else {
-            PlayerActivity.episodeIntent(context, found.url, found.title, item.title, item.traktId, item.season ?: 0, item.episode ?: 0, item.imageUrl, item.posterUrl)
-        }
+        val intent = PlayerActivity.mediaIntent(context, found.url, found.title, item)
         if (found.headers.isNotEmpty()) intent.putExtra("headers", found.headers.flatMap { listOf(it.key, it.value) }.toTypedArray())
         context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         return Result.Playing(found.title)

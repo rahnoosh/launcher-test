@@ -25,6 +25,15 @@ data class MediaItem(
     val episode: Int? = null,
     /** TMDB description of the show or movie. */
     val overview: String? = null,
+    /** Simkl id and IMDb id of the show or movie, so Simkl and Trakt can both be told what you watched. */
+    val simklId: Long? = null,
+    val imdbId: String? = null,
+    /** Anime from Simkl: episode numbers restart in each cour, with no season. */
+    val anime: Boolean = false,
+    /** The title's page on simkl.com, shown as a QR code (Simkl asks apps to link back). */
+    val simklUrl: String? = null,
+    /** When you last watched it (next up) or added it (watchlist); orders rows that mix Trakt and Simkl. */
+    val sortMillis: Long? = null,
 )
 
 @Serializable

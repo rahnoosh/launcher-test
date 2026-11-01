@@ -48,6 +48,8 @@ data class IptvChannel(
     val userAgent: String? = null,
     /** Channel number from the provider (Xtream "num", M3U tvg-chno). */
     val number: String? = null,
+    /** How many days of recordings (catch-up) the provider keeps, when it says. */
+    val archiveDays: Int? = null,
 ) {
     val key: String get() = "$sourceId:$id"
 }

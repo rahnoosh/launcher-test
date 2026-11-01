@@ -70,10 +70,17 @@ sealed interface Tile {
         override val subtitle = "Add or remove teams"
     }
 
+    /** Asks you to connect Trakt or Simkl (opens the Accounts panel). */
     data object ConnectTrakt : Tile {
         override val key = "connect-trakt"
-        override val title = "Connect Trakt"
+        override val title = "Connect Trakt or Simkl"
         override val subtitle = "Shows & watchlist"
+    }
+
+    /** What's playing in the picture-in-picture window: OK goes back to full screen. */
+    data class NowPlaying(override val title: String) : Tile {
+        override val key = "now-playing"
+        override val subtitle = "Playing in a window"
     }
 
     data class Message(override val title: String, override val subtitle: String) : Tile {
@@ -96,18 +103,15 @@ data class Strip(val title: String, val hint: String, val items: List<StripItem>
 
 fun buildTiles(tab: HomeTab, s: HomeUiState): List<Tile> {
     val d = s.data
-    val signedIn = s.trakt == TraktState.SignedIn
-    val traktPrompt: List<Tile> = when (s.trakt) {
-        TraktState.SignedOut, is TraktState.AwaitingCode -> listOf(Tile.ConnectTrakt)
-        TraktState.NotConfigured -> if (tab == HomeTab.TV) listOf(Tile.Message("Trakt not set up", "Enter keys: phone page or Settings → API keys")) else emptyList()
-        TraktState.SignedIn -> emptyList()
-    }
+    val signedIn = s.tracking
+    val traktPrompt: List<Tile> = trackerPrompt(s, showUnconfigured = tab == HomeTab.TV)
     val allSports = (d.myTeams + d.nfl + d.fights + d.f1 + d.events).distinctBy { it.id }
     val live = allSports.filter { it.live }
     val history = s.history.filter { !it.finished }
 
     val tiles: List<Tile> = when (tab) {
         HomeTab.FOR_YOU -> buildList<Tile> {
+            s.pip?.let { add(Tile.NowPlaying(it)) }
             history.take(3).forEach { add(Tile.Resume(it)) }
             live.forEach { add(Tile.Game(it)) }
             d.results.take(3).forEach { add(Tile.Game(it)) }
@@ -122,6 +126,7 @@ fun buildTiles(tab: HomeTab, s: HomeUiState): List<Tile> {
             add(Tile.AllApps)
         }
         HomeTab.TV -> buildList<Tile> {
+            s.pip?.let { add(Tile.NowPlaying(it)) }
             s.history.take(10).forEach { add(Tile.Resume(it)) }
             if (signedIn) {
                 d.upNext.forEach { add(Tile.Media(it, Tile.Role.UP_NEXT)) }
@@ -185,12 +190,8 @@ data class HomeRow(val title: String, val tiles: List<Tile>)
 
 fun buildRows(tab: HomeTab, s: HomeUiState): List<HomeRow> {
     val d = s.data
-    val signedIn = s.trakt == TraktState.SignedIn
-    val traktPrompt: List<Tile> = when (s.trakt) {
-        TraktState.SignedOut, is TraktState.AwaitingCode -> listOf(Tile.ConnectTrakt)
-        TraktState.NotConfigured -> listOf(Tile.Message("Trakt not set up", "Enter keys: phone page or Settings → API keys"))
-        TraktState.SignedIn -> emptyList()
-    }
+    val signedIn = s.tracking
+    val traktPrompt: List<Tile> = trackerPrompt(s, showUnconfigured = true)
     val sports = (d.myTeams + d.nfl + d.fights + d.f1 + d.events).distinctBy { it.id }
     val live = sports.filter { it.live }
     val liveIds = live.map { it.id }.toSet()
@@ -198,6 +199,7 @@ fun buildRows(tab: HomeTab, s: HomeUiState): List<HomeRow> {
     fun games(list: List<com.launcher.tv.data.SportsEvent>) = list.filter { it.id !in liveIds }.map<com.launcher.tv.data.SportsEvent, Tile> { Tile.Game(it) }
     fun media(list: List<com.launcher.tv.data.MediaItem>, role: Tile.Role) = list.map<com.launcher.tv.data.MediaItem, Tile> { Tile.Media(it, role) }
 
+    val nowPlaying = HomeRow("Now Playing", listOfNotNull(s.pip?.let { Tile.NowPlaying(it) }))
     val continueWatching = HomeRow("Continue Watching", s.history.filter { !it.finished }.take(15).map { Tile.Resume(it) })
     val liveNow = HomeRow("Live Now", live.map { Tile.Game(it) })
     val nextUp = HomeRow("Next Up", (if (signedIn) media(d.upNext, Tile.Role.UP_NEXT) else emptyList()) + traktPrompt)
@@ -212,9 +214,9 @@ fun buildRows(tab: HomeTab, s: HomeUiState): List<HomeRow> {
     val apps = s.apps.map { Tile.App(it) }
 
     val rows = when (tab) {
-        HomeTab.FOR_YOU -> listOf(continueWatching, liveNow, nextUp, teams, results, newEpisodes, fights, nfl, f1, majors, watchlist, HomeRow("Apps", apps.take(12)))
-        HomeTab.TV -> listOf(continueWatching, nextUp, newEpisodes, watchlist)
-        HomeTab.SPORTS -> listOf(liveNow, teams, results, fights, nfl, f1, majors)
+        HomeTab.FOR_YOU -> listOf(nowPlaying, continueWatching, liveNow, nextUp, teams, results, newEpisodes, fights, nfl, f1, majors, watchlist, HomeRow("Apps", apps.take(12)))
+        HomeTab.TV -> listOf(nowPlaying, continueWatching, nextUp, newEpisodes, watchlist)
+        HomeTab.SPORTS -> listOf(nowPlaying, liveNow, teams, results, fights, nfl, f1, majors)
         HomeTab.APPS -> apps.chunked(6).mapIndexed { i, chunk -> HomeRow(if (i == 0) "Apps" else "", chunk) }
     }.filter { it.tiles.isNotEmpty() }
 
@@ -228,4 +230,19 @@ fun buildRows(tab: HomeTab, s: HomeUiState): List<HomeRow> {
             ),
         )
     )
+}
+
+/** The card asking you to connect Trakt or Simkl, shown while neither is connected. */
+private fun trackerPrompt(s: HomeUiState, showUnconfigured: Boolean): List<Tile> = when {
+    s.tracking -> emptyList()
+    s.trakt != TraktState.NotConfigured || s.simkl != SimklState.NotConfigured -> listOf(Tile.ConnectTrakt)
+    showUnconfigured -> listOf(Tile.Message("Trakt or Simkl not set up", "Enter keys: phone page or Settings → API keys"))
+    else -> emptyList()
+}
+
+/** Where a next-up card came from, for its label. */
+fun com.launcher.tv.data.MediaItem.trackerLabel(): String = when {
+    traktId != null && simklId != null -> "Trakt & Simkl"
+    simklId != null -> "Simkl"
+    else -> "Trakt"
 }
