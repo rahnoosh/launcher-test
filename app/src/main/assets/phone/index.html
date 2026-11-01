@@ -23,8 +23,8 @@
   .row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
   .row:last-child { border-bottom:0; }
   .grow { flex:1; min-width:0; }
-  .title { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .sub { color:var(--dim); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .title { font-weight:600; overflow-wrap:anywhere; }
+  .sub { color:var(--dim); font-size:13px; overflow-wrap:anywhere; }
   input, select { width:100%; background:#111317; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:12px; font:inherit; }
   input:focus, select:focus { outline:2px solid var(--accent); border-color:transparent; }
   label { display:block; color:var(--dim); font-size:13px; margin:10px 0 4px; }
@@ -53,6 +53,10 @@
   .center { max-width:360px; margin:12vh auto 0; text-align:center; }
   .pin { font-size:28px; letter-spacing:.35em; text-align:center; }
   .actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  /* Search results: the text gets the full width and the buttons go underneath. */
+  .result { flex-wrap:wrap; }
+  .result .grow { flex-basis:100%; }
+  .result .actions { justify-content:flex-start; }
 </style>
 </head>
 <body>
@@ -145,7 +149,7 @@
         <button class="btn small" id="backup">Download</button></div>
       <div class="toggle"><div class="grow"><div class="title">Include provider logins</div><div class="sub">Only if you'll keep the file private: it then contains your passwords</div></div>
         <label class="switch"><input type="checkbox" id="backupLogins"><span></span></label></div>
-      <div class="row"><div class="grow"><div class="title">Restore a backup</div><div class="sub">Replaces providers, teams and settings on the TV</div></div>
+      <div class="row"><div class="grow"><div class="title">Restore a backup</div><div class="sub">Replaces teams and settings on the TV, and providers if the file has logins</div></div>
         <button class="btn small" id="restoreBtn">Choose file</button><input type="file" id="restoreFile" accept="application/json,.json" hidden></div>
     </div>
   </section>
@@ -331,7 +335,7 @@ async function search() {
     box.replaceChildren(); box.hidden = false; $("#searchHint").hidden = true;
     if (!r.results.length) box.append(el("div", { class: "muted", text: "Nothing found." }));
     const kinds = { game: "Game", show: "Show", movie: "Movie", channel: "Channel", vod: "Movie / episode" };
-    r.results.forEach((x) => box.append(el("div", { class: "row" },
+    r.results.forEach((x) => box.append(el("div", { class: "row result" },
       el("div", { class: "grow" }, el("div", { class: "kind", text: kinds[x.kind] || x.kind }), el("div", { class: "title", text: x.title }), el("div", { class: "sub", text: x.subtitle || "" })),
       el("div", { class: "actions" },
         el("button", { class: "btn small primary", text: x.kind === "game" || x.kind === "channel" ? "Watch on TV" : "Play on TV", onclick: (e) => play(e.target, x.ref, "watch") }),
@@ -352,7 +356,7 @@ $("#kSave").onclick = (e) => run(e.target, async () => {
 $("#restoreBtn").onclick = () => $("#restoreFile").click();
 $("#restoreFile").onchange = (e) => {
   const file = e.target.files[0]; if (!file) return;
-  if (!confirm("Restore this backup on the TV? It replaces providers, teams and settings.")) return;
+  if (!confirm("Restore this backup on the TV? It replaces your teams and settings, and your providers if the file has logins.")) return;
   run(null, async () => { const data = JSON.parse(await file.text()); const r = await api("/api/restore", data); toast(r.message); await load(); });
 };
 
