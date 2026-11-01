@@ -212,7 +212,12 @@ private fun SkyTile(state: HomeUiState, now: Long) {
     val rise = w?.sunrise ?: day.atTime(6, 45).atZone(zone).toInstant().toEpochMilli()
     val set = w?.sunset ?: day.atTime(18, 15).atZone(zone).toInstant().toEpochMilli()
     val daytime = now in rise..set
-    val fraction = if (daytime) ((now - rise).toFloat() / (set - rise)).coerceIn(0f, 1f) else 0.5f
+    // The sun along the arc by day; at night, on the horizon it set behind (or will rise from).
+    val fraction = when {
+        daytime -> ((now - rise).toFloat() / (set - rise)).coerceIn(0f, 1f)
+        now > set -> 1f
+        else -> 0f
+    }
     val fmt = DateTimeFormatter.ofPattern(if (Locale.getDefault().country in setOf("US", "CA", "AU", "IN", "PH")) "h:mm a" else "HH:mm")
     Column(Modifier.size(92.dp, 196.dp).glass(RoundedCornerShape(24.dp)).padding(horizontal = 10.dp, vertical = 12.dp)) {
         Text(phase.label.uppercase(), color = Color(0xFFFFC48A), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1)

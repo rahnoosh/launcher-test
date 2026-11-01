@@ -180,7 +180,7 @@ fun AuraLayout(
             Column(Modifier.fillMaxSize().padding(start = 100.dp, end = 36.dp, top = 26.dp)) {
                 AuraHeader(shown)
                 Spacer(Modifier.height(14.dp))
-                Box(Modifier.fillMaxWidth().height(168.dp)) {
+                Box(Modifier.fillMaxWidth().height(150.dp)) {
                     Crossfade(targetState = preview, animationSpec = tween(350), label = "hero") { t ->
                         if (t != null) AuraHero(t, shown, Modifier.fillMaxSize())
                     }
@@ -312,13 +312,13 @@ private fun AuraHero(tile: Tile, state: HomeUiState, modifier: Modifier) {
     val b = billboardInfo(tile, state)
     Box(modifier.glass(RoundedCornerShape(26.dp))) {
         HeroArt(tile, Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(0.55f))
-        Column(Modifier.align(Alignment.CenterStart).fillMaxWidth(0.62f).padding(horizontal = 26.dp, vertical = 18.dp)) {
+        Column(Modifier.align(Alignment.CenterStart).fillMaxWidth(0.62f).padding(horizontal = 26.dp, vertical = 14.dp)) {
             b.eyebrow?.let { HeroEyebrow(it, b.live, tile, state) }
             val g = b.game
             if (g != null) ScoreLine(g) else {
                 Text(
-                    b.title, color = Color.White, fontSize = if (b.title.length > 26) 22.sp else 27.sp, fontWeight = FontWeight.Bold,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, letterSpacing = (-0.3).sp, modifier = Modifier.padding(top = 10.dp),
+                    b.title, color = Color.White, fontSize = if (b.title.length > 26) 21.sp else 25.sp, fontWeight = FontWeight.Bold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, letterSpacing = (-0.3).sp, modifier = Modifier.padding(top = 8.dp),
                 )
             }
             if (b.meta.isNotEmpty()) {
@@ -330,7 +330,7 @@ private fun AuraHero(tile: Tile, state: HomeUiState, modifier: Modifier) {
                 }
             }
             if (b.progress == null) b.overview?.let {
-                Text(it, color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+                Text(it, color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp, lineHeight = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
             }
             b.hint?.let { Text(it, color = Color.White.copy(alpha = 0.5f), fontSize = 9.5.sp, modifier = Modifier.padding(top = 10.dp)) }
         }
@@ -440,7 +440,7 @@ private fun AuraCard(tile: Tile, onClick: () -> Unit, onLongClick: () -> Unit, m
         Card(
             onClick = onClick,
             onLongClick = onLongClick,
-            modifier = modifier.size(200.dp, 112.dp).onFocusChanged { focused = it.isFocused || it.hasFocus },
+            modifier = modifier.size(176.dp, 99.dp).onFocusChanged { focused = it.isFocused || it.hasFocus },
             shape = CardDefaults.shape(shape),
             colors = CardDefaults.colors(containerColor = Color.Transparent, focusedContainerColor = Color.Transparent),
             scale = CardDefaults.scale(focusedScale = 1.07f),
@@ -453,7 +453,7 @@ private fun AuraCard(tile: Tile, onClick: () -> Unit, onLongClick: () -> Unit, m
         if (tile is Tile.App) {
             Text(
                 if (focused) tile.title else "", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp).height(15.dp).widthIn(max = 200.dp),
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp).height(15.dp).widthIn(max = 176.dp),
             )
         }
     }
@@ -466,8 +466,9 @@ private fun AuraCardFace(tile: Tile) {
     Box(Modifier.fillMaxSize()) {
         when (tile) {
             is Tile.Resume -> {
-                CardArt(tile.entry.imageUrl ?: tile.entry.posterUrl, tile.title)
-                CardCaption(tile.title, tile.entry.subtitle, Modifier.align(Alignment.BottomStart).padding(bottom = 4.dp))
+                val art = tile.entry.imageUrl ?: tile.entry.posterUrl
+                CardArt(art, tile.title)
+                CardCaption(tile.title, tile.entry.subtitle, Modifier.align(Alignment.BottomStart).padding(bottom = 4.dp), large = art == null)
                 if (tile.entry.progress > 0f) {
                     Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp).height(2.5.dp).background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(50))) {
                         Box(Modifier.fillMaxHeight().fillMaxWidth(tile.entry.progress.coerceIn(0.02f, 1f)).background(Color.White, RoundedCornerShape(50)))
@@ -475,8 +476,9 @@ private fun AuraCardFace(tile: Tile) {
                 }
             }
             is Tile.Media -> {
-                CardArt(tile.item.imageUrl ?: tile.item.posterUrl, tile.title)
-                CardCaption(tile.title, tile.subtitle, Modifier.align(Alignment.BottomStart))
+                val art = tile.item.imageUrl ?: tile.item.posterUrl
+                CardArt(art, tile.title)
+                CardCaption(tile.title, tile.subtitle, Modifier.align(Alignment.BottomStart), large = art == null)
                 if (tile.isNew) Tag("NEW", Accent, Color(0xFF1A1205), Modifier.align(Alignment.TopStart))
                 if (tile.role == Tile.Role.UPCOMING) Tag("SOON", Color.Black.copy(alpha = 0.55f), Color.White, Modifier.align(Alignment.TopStart))
             }
@@ -553,23 +555,21 @@ private fun BoxScope.GameGlass(e: SportsEvent) {
     if (e.finished) Tag("FINAL", Color.Black.copy(alpha = 0.5f), Color.White, Modifier.align(Alignment.TopStart))
 }
 
+/** Artwork with a shade for the caption; without artwork the card stays plain glass. */
 @Composable
-private fun BoxScope.CardArt(url: String?, title: String) {
-    if (url != null) {
-        AsyncImage(url, title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        Box(Modifier.fillMaxSize().background(cardScrim))
-    } else {
-        Text(
-            title, Modifier.align(Alignment.Center).padding(horizontal = 12.dp).padding(bottom = 18.dp),
-            color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
-        )
-    }
+private fun CardArt(url: String?, title: String) {
+    if (url == null) return
+    AsyncImage(url, title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+    Box(Modifier.fillMaxSize().background(cardScrim))
 }
 
 @Composable
-private fun CardCaption(title: String, subtitle: String, modifier: Modifier) {
+private fun CardCaption(title: String, subtitle: String, modifier: Modifier, large: Boolean = false) {
     Column(modifier.padding(horizontal = 11.dp, vertical = 7.dp)) {
-        Text(title, color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            title, color = Color.White, fontSize = if (large) 15.sp else 11.5.sp, fontWeight = if (large) FontWeight.Bold else FontWeight.SemiBold,
+            maxLines = if (large) 2 else 1, overflow = TextOverflow.Ellipsis, lineHeight = if (large) 18.sp else 14.sp,
+        )
         if (subtitle.isNotBlank()) Text(subtitle, color = Color.White.copy(alpha = 0.75f), fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
