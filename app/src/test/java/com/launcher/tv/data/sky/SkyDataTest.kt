@@ -21,6 +21,28 @@ class SkyDataTest {
     }
 
     @Test
+    fun photoArchiveAndCredits() {
+        val json = """{"images":[
+            {"urlbase":"/th?id=OHR.A_EN-US1","copyright":"Larch trees in the Dolomites, Italy (© Jane Doe/Getty Images)"},
+            {"urlbase":"/th?id=OHR.B_EN-US2","copyright":"Old Faithful, Yellowstone"}]}"""
+        val all = PhotoArchive.parseAll(Json.parseToJsonElement(json))
+        assertEquals(listOf("https://www.bing.com/th?id=OHR.A_EN-US1_1920x1080.jpg", "https://www.bing.com/th?id=OHR.B_EN-US2_1920x1080.jpg"), all.map { it.first })
+        assertEquals("Larch trees in the Dolomites, Italy" to "© Jane Doe/Getty Images", PhotoArchive.splitCredit(all[0].second))
+        assertEquals("Old Faithful, Yellowstone" to null, PhotoArchive.splitCredit(all[1].second))
+    }
+
+    @Test
+    fun quotesWrapIntoLines() {
+        assertEquals(listOf("The journey of a thousand", "miles begins with a single", "step."), Quotes.wrap("The journey of a thousand miles begins with a single step.", 26))
+        assertEquals(listOf("Knowledge is power."), Quotes.wrap("Knowledge is power.", 30))
+        // Every bundled quote has an author and fits on a TV screen in a few lines.
+        Quotes.all.forEach { q ->
+            assert(q.author.isNotBlank())
+            assert(Quotes.wrap(q.text, 30).size <= 5) { q.text }
+        }
+    }
+
+    @Test
     fun openMeteoForecast() {
         val json = """{"latitude":33.2,"longitude":-87.6,"utc_offset_seconds":-18000,"timezone":"America/Chicago",
             "current":{"time":"2026-10-31T20:45","interval":900,"temperature_2m":18.3,"weather_code":2,"is_day":0},

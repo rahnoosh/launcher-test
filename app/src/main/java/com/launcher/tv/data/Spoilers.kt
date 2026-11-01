@@ -7,7 +7,7 @@ import android.content.Context
  * screensaver, alerts) until you choose "Show score" for that game.
  */
 object Spoilers {
-    private fun prefs(c: Context) = c.getSharedPreferences("spoilers", Context.MODE_PRIVATE)
+    private fun prefs(c: Context) = Profiles.prefs(c, "spoilers")
 
     fun enabled(c: Context): Boolean = prefs(c).getBoolean("enabled", false)
     fun setEnabled(c: Context, on: Boolean) = prefs(c).edit().putBoolean("enabled", on).apply()

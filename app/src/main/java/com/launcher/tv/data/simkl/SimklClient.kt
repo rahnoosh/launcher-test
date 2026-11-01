@@ -39,8 +39,8 @@ import java.net.URLEncoder
  */
 class SimklClient(context: Context) {
     private val appContext = context.applicationContext
-    private val prefs = appContext.getSharedPreferences("simkl", Context.MODE_PRIVATE)
-    private val libraryFile get() = File(appContext.filesDir, "simkl_library.json")
+    private val prefs = com.launcher.tv.data.Profiles.prefs(appContext, "simkl")
+    private val libraryFile get() = com.launcher.tv.data.Profiles.file(appContext, "simkl_library.json")
     private val clientId: String get() = ApiKeys.simklId(appContext)
 
     val isConfigured: Boolean get() = clientId.isNotBlank()

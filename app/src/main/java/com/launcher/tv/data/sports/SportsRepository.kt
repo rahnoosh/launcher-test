@@ -137,6 +137,7 @@ object SportsRepository {
         if (!enabled) return@runCatchingNull emptyList<SportsEvent>() to emptyList<SportsEvent>()
         val races = Http.getJson("https://api.jolpi.ca/ergast/f1/current/races.json").obj()
             ?.obj("MRData")?.obj("RaceTable")?.arr("Races").orEmpty()
+        val now = System.currentTimeMillis()
         races.mapNotNull { r ->
             val o = r.obj() ?: return@mapNotNull null
             val start = parseDateAndTime(o.str("date"), o.str("time")) ?: return@mapNotNull null
@@ -148,13 +149,15 @@ object SportsRepository {
                 title = o.str("raceName") ?: "Grand Prix",
                 league = "F1",
                 startMillis = start,
-                status = quali?.let { "Qualifying ${formatShort(it)}" },
+                // A race runs about two hours: live from lights out, then a result.
+                live = now in start until start + F1_RACE_MS,
+                // Qualifying time only until qualifying has happened.
+                status = quali?.takeIf { it > now }?.let { "Qualifying ${formatShort(it)}" },
                 venue = listOfNotNull(circuit?.str("circuitName"), loc?.str("country")).joinToString(" · "),
             )
         }.let { all ->
-            val now = System.currentTimeMillis()
-            all.filter { it.isUpcomingOrLive() }.sortedBy { it.startMillis }.take(3) to
-                all.filter { it.startMillis in (now - 48 * 3600_000L)..(now - 3 * 3600_000L) }.map { it.copy(finished = true) }
+            all.filter { it.live || it.isUpcomingOrLive() && it.startMillis > now - F1_RACE_MS }.sortedBy { it.startMillis }.take(3) to
+                all.filter { it.startMillis in (now - 48 * 3600_000L)..(now - F1_RACE_MS) }.map { it.copy(finished = true) }
         }
     }
 
@@ -330,6 +333,9 @@ object SportsRepository {
     }
 
     // ---------------- helpers ----------------
+
+    /** Lights out to the chequered flag, with room for a delay or a red flag. */
+    private const val F1_RACE_MS = 2 * 3600_000L + 30 * 60_000L
 
     private fun SportsEvent.isUpcomingOrLive(): Boolean {
         val now = System.currentTimeMillis()

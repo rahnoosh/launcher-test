@@ -129,6 +129,8 @@
     <label for="watchApp">Movies and shows open in</label>
     <select id="watchApp"></select>
     <p class="muted" id="watchAppHint"></p>
+    <label for="saver">Screensaver</label>
+    <select id="saver"><option value="auto">Auto (photos and quotes)</option><option value="photos">Photos</option><option value="quotes">Quotes</option><option value="scores">Scores</option></select>
     <label for="layout">Home screen layout</label>
     <select id="layout"><option value="aura">Aura (glass over a daily photo)</option><option value="rows">Rows (streaming-app style)</option><option value="tiles">Tiles (console style)</option></select>
     <label for="sleep">Sleep timer</label>
@@ -234,7 +236,7 @@ function crest(t) {
 }
 
 function render() {
-  $("#tvName").textContent = state.tv ? "on " + state.tv : "";
+  $("#tvName").textContent = (state.tv ? "on " + state.tv : "") + (state.profile ? "  ·  " + state.profile + " watching" : "");
   // update banner
   const u = state.update || {};
   $("#updateBanner").hidden = !u.available;
@@ -267,6 +269,7 @@ function render() {
     toggleRow("One-press TiviMate tuning", "Experimental, uses network debugging", s.tivimateTuning, set("tivimateTuning")),
   );
   $("#layout").value = s.layout;
+  $("#saver").value = s.saver || "auto";
   const wa = $("#watchApp"), apps = state.watchApps || [];
   wa.replaceChildren(el("option", { value: "homebase", text: "HomeBase (your providers)" }), ...apps.map((a) => el("option", { value: a.key, text: a.label })));
   wa.value = apps.some((a) => a.key === s.watchApp) ? s.watchApp : "homebase";
@@ -286,6 +289,7 @@ function toggleRow(title, sub, on, onChange) {
 
 $("#games").onchange = (e) => run(null, async () => { state = await api("/api/games-per-team", { n: Number(e.target.value) }); toast("Saved"); });
 $("#watchApp").onchange = (e) => run(null, async () => { state = await api("/api/settings", { key: "watchApp", value: e.target.value }); toast("Saved"); });
+$("#saver").onchange = (e) => run(null, async () => { state = await api("/api/settings", { key: "saver", value: e.target.value }); toast("Saved"); });
 $("#layout").onchange = (e) => run(null, async () => { state = await api("/api/settings", { key: "layout", value: e.target.value }); toast("Layout changed on the TV"); });
 $("#sleep").onchange = (e) => run(null, async () => { state = await api("/api/sleep", { minutes: Number(e.target.value) }); toast(Number(e.target.value) ? "Sleep timer set" : "Sleep timer off"); });
 

@@ -175,6 +175,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
         val follow = FollowStore.load(app)
         return buildJsonObject {
             put("tv", Build.MODEL)
+            put("profile", com.launcher.tv.data.Profiles.active(app).name)
             put("version", BuildConfig.VERSION_NAME)
             put("update", updateJson())
             putJsonArray("teams") { follow.teams.forEach { add(teamJson(it, true)) } }
@@ -205,6 +206,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
                 put("tivimateTuning", TiviMateTuner.enabled(app))
                 put("layout", layout())
                 put("watchApp", com.launcher.tv.player.WatchApps.preferred(app))
+                put("saver", com.launcher.tv.dream.SaverStyle.current(app).key)
                 put("sleepMinutes", SleepTimer.minutesLeft(app))
             }
         }
@@ -229,7 +231,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
         put("followed", followed)
     }
 
-    private fun layout() = app.getSharedPreferences("ui", Context.MODE_PRIVATE).getString("layout", "aura") ?: "aura"
+    private fun layout() = com.launcher.tv.data.Profiles.prefs(app, "ui").getString("layout", "aura") ?: "aura"
 
     private fun applySetting(key: String, value: JsonElement?) {
         when (key) {
@@ -237,9 +239,10 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
             "alerts" -> AlertSettings.setEnabled(app, value.bool() ?: true)
             "scoringAlerts" -> AlertSettings.setScoring(app, value.bool() ?: true)
             "tivimateTuning" -> TiviMateTuner.setEnabled(app, value.bool() ?: false)
-            "layout" -> app.getSharedPreferences("ui", Context.MODE_PRIVATE).edit()
+            "layout" -> com.launcher.tv.data.Profiles.prefs(app, "ui").edit()
                 .putString("layout", value.string()?.takeIf { it in setOf("aura", "rows", "tiles") } ?: "aura").apply()
             "watchApp" -> com.launcher.tv.player.WatchApps.setPreferred(app, value.string() ?: com.launcher.tv.player.WatchApps.HOMEBASE)
+            "saver" -> com.launcher.tv.dream.SaverStyle.set(app, com.launcher.tv.dream.SaverStyle.of(value.string()))
             else -> throw IllegalArgumentException("Unknown setting $key")
         }
     }
@@ -383,6 +386,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
             put("tivimateTuning", TiviMateTuner.enabled(app))
             put("layout", layout())
             put("watchApp", com.launcher.tv.player.WatchApps.preferred(app))
+                put("saver", com.launcher.tv.dream.SaverStyle.current(app).key)
         }
         putJsonObject("channelChoices") {
             app.getSharedPreferences("channel_choices", Context.MODE_PRIVATE).all.forEach { (k, v) -> if (v is String) put(k, v) }

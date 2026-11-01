@@ -261,6 +261,20 @@ of wide cards below.
 
 Switch layouts in Settings → Home screen layout, or on the phone page.
 
+## Profiles
+
+Everyone in the house can have a profile with their own Trakt and Simkl accounts, teams, settings (layout, spoiler
+mode, where movies play, screensaver) and Continue Watching. The box's IPTV providers, API keys, phone page and
+sleep timer are shared.
+
+- **Who's watching:** select the round avatar at the bottom of the sidebar (or Settings → Profiles, or the Profile
+  button if your remote has one). OK switches; the home screen reloads with that person's rows.
+- **Add, rename or remove:** *Add profile* in the picker; hold OK on someone to rename or remove them. Removing a
+  profile deletes what it kept on the box. Your existing setup is the main profile, which can't be removed.
+- **Kids profiles** ask for a 4-digit PIN, chosen when you add the first one. They need it for Settings, Control
+  Center, accounts, Edit teams, and switching to another profile. Once entered, the PIN isn't asked for again for
+  five minutes.
+
 ## Your teams (on the TV)
 
 **Quick settings → Your teams**, or the **+ Add or remove teams** card at the end of *Your Teams*, opens the
@@ -348,8 +362,19 @@ too.
 
 ## 10. Screensaver
 
-HomeBase includes a screensaver. It shows a big clock, your shows' artwork and team colours slowly zooming, live
-scores, and what's on in the next three days. It shifts a few pixels every minute to protect OLED screens.
+HomeBase includes a screensaver, in the Aura style:
+
+- **Photos:** Bing's photographs of the last two weeks drift slowly, one every 45 seconds, each with where it was
+  taken and who took it. HomeBase downloads them once a day and keeps them on the box.
+- **Quotes:** the same photographs with a quote in large type, lighting up line by line. The quotes are bundled:
+  well-known lines from public-domain writers and proverbs, so they work offline.
+- **Auto** (the default) does both in turn.
+- **Scores** is HomeBase's original scoreboard: a big clock, your shows' artwork and team colours, live scores and
+  the next three days.
+
+If one of your games is live (or starts in the next day), a small glass card at the bottom shows it, without the
+score in spoiler mode. Choose the style in Settings → Screensaver (or on the phone page), where *Preview* shows it.
+
 Google TV doesn't list third-party screensavers in its menus, so switch it on over adb:
 
 ```sh

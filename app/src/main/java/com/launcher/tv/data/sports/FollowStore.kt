@@ -43,7 +43,7 @@ object FollowStore {
     )
     val DEFAULT_EVENTS = setOf(EventFollow.NFL_WEEK.key, EventFollow.UFC.key, EventFollow.BOXING.key, EventFollow.F1.key)
 
-    private fun prefs(c: Context) = c.getSharedPreferences("follows", Context.MODE_PRIVATE)
+    private fun prefs(c: Context) = com.launcher.tv.data.Profiles.prefs(c, "follows")
 
     fun load(c: Context): FollowConfig =
         prefs(c).getString("config", null)?.let { decode(it) } ?: FollowConfig()

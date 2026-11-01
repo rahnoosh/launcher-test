@@ -88,6 +88,13 @@ data class HomeUiState(
     val weather: com.launcher.tv.data.sky.Weather.Now? = null,
     /** Stremio and Nuvio, if installed. */
     val watchApps: List<com.launcher.tv.player.WatchApp> = emptyList(),
+    /** Who's watching, and everyone in the house. */
+    val profile: com.launcher.tv.data.Profile = com.launcher.tv.data.Profile(com.launcher.tv.data.Profiles.MAIN, "You"),
+    val profiles: List<com.launcher.tv.data.Profile> = listOf(profile),
+    /** Screensaver: "auto" (photos and quotes), "photos", "quotes" or "scores". */
+    val saver: String = "auto",
+    /** The remote's Profile button asked for Who's watching. */
+    val askProfiles: Boolean = false,
     /** Where Play sends next episodes and watchlist movies: "homebase", "stremio" or "nuvio". */
     val watchApp: String = com.launcher.tv.player.WatchApps.HOMEBASE,
     /** How many teams are followed (Quick settings tile). */
@@ -188,8 +195,39 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         }
         _state.update { it.copy(teamsCount = com.launcher.tv.data.sports.FollowStore.load(app).teams.size, keys = keyStatus(), simklKey = simklClient.isConfigured) }
         loadWeather()
+        loadProfiles()
+        _state.update { it.copy(saver = com.launcher.tv.dream.SaverStyle.current(app).key) }
         refreshPhone()
     }
+
+    private fun loadProfiles() {
+        val app = getApplication<Application>()
+        _state.update { it.copy(profile = com.launcher.tv.data.Profiles.active(app), profiles = com.launcher.tv.data.Profiles.all(app)) }
+    }
+
+    fun addProfile(name: String, kids: Boolean) {
+        val added = com.launcher.tv.data.Profiles.add(getApplication(), name, kids)
+        loadProfiles()
+        _state.update { it.copy(message = if (added == null) "Up to ${com.launcher.tv.data.Profiles.MAX} profiles" else "Added ${added.name}") }
+    }
+
+    fun renameProfile(p: com.launcher.tv.data.Profile, name: String) {
+        com.launcher.tv.data.Profiles.update(getApplication(), p.copy(name = name))
+        loadProfiles()
+    }
+
+    /** Removing the active profile switches to the main one (the screen rebuilds). */
+    fun removeProfile(p: com.launcher.tv.data.Profile) {
+        com.launcher.tv.data.Profiles.remove(getApplication(), p.id)
+        loadProfiles()
+    }
+
+    /** The home screen rebuilds for the new person (MainActivity listens). */
+    fun switchProfile(p: com.launcher.tv.data.Profile) = com.launcher.tv.data.Profiles.switchTo(getApplication(), p.id)
+
+    fun askProfiles() = _state.update { it.copy(askProfiles = true) }
+
+    fun profilesShown() = _state.update { it.copy(askProfiles = false) }
 
     private fun loadWeather() {
         viewModelScope.launch {
@@ -230,9 +268,10 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 alerts = AlertSettings.enabled(app),
                 scoringAlerts = AlertSettings.scoring(app),
                 tiviMateTuning = com.launcher.tv.player.TiviMateTuner.enabled(app),
-                layout = app.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).getString("layout", "aura") ?: "aura",
+                layout = com.launcher.tv.data.Profiles.prefs(app, "ui").getString("layout", "aura") ?: "aura",
                 sleepMinutes = SleepTimer.minutesLeft(app),
                 watchApp = com.launcher.tv.player.WatchApps.preferred(app),
+                saver = com.launcher.tv.dream.SaverStyle.current(app).key,
             )
         }
     }
@@ -410,6 +449,12 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun setSaver(key: String) {
+        val app = getApplication<Application>()
+        com.launcher.tv.dream.SaverStyle.set(app, com.launcher.tv.dream.SaverStyle.of(key))
+        _state.update { it.copy(saver = key) }
+    }
+
     fun setWatchApp(key: String) {
         val app = getApplication<Application>()
         com.launcher.tv.player.WatchApps.setPreferred(app, key)
@@ -467,7 +512,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setLayout(layout: String) {
-        getApplication<Application>().getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).edit().putString("layout", layout).apply()
+        com.launcher.tv.data.Profiles.prefs(getApplication<Application>(), "ui").edit().putString("layout", layout).apply()
         _state.update { it.copy(layout = layout) }
     }
 
@@ -698,7 +743,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
 /** The Aura look is the new default: switch to it once, after which the choice in Settings sticks. */
 private fun auraOnce(app: Application): String {
-    val prefs = app.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE)
+    val prefs = com.launcher.tv.data.Profiles.prefs(app, "ui")
     if (!prefs.getBoolean("aura_intro", false)) prefs.edit().putString("layout", "aura").putBoolean("aura_intro", true).apply()
     return prefs.getString("layout", "aura") ?: "aura"
 }

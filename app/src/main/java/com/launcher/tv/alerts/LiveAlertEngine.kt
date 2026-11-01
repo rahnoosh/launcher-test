@@ -65,7 +65,7 @@ class LiveAlertEngine internal constructor(
         store = PrefsFiredStore(context),
         schedule = {
             withContext(Dispatchers.IO) {
-                runCatching { Http.json.decodeFromString(HomeData.serializer(), File(context.filesDir, "home_cache.json").readText()) }.getOrNull()
+                runCatching { Http.json.decodeFromString(HomeData.serializer(), com.launcher.tv.data.Profiles.file(context, "home_cache.json").readText()) }.getOrNull()
             }
         },
         scoreboard = { SportsRepository.liveScoreboard(it) },

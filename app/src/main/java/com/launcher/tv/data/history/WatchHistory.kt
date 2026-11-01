@@ -40,7 +40,7 @@ data class HistoryEntry(
  * newest first. Stored on the box only.
  */
 class WatchHistory private constructor(context: Context) {
-    private val file = File(context.filesDir, "watch_history.json")
+    private val file = com.launcher.tv.data.Profiles.file(context, "watch_history.json")
     private val mutex = Mutex()
     private val serializer = ListSerializer(HistoryEntry.serializer())
     private val _entries = MutableStateFlow<List<HistoryEntry>>(emptyList())
@@ -87,5 +87,8 @@ class WatchHistory private constructor(context: Context) {
         @Volatile private var instance: WatchHistory? = null
         fun get(context: Context): WatchHistory =
             instance ?: synchronized(this) { instance ?: WatchHistory(context.applicationContext).also { instance = it } }
+
+        /** After a profile switch: the next [get] reads the new profile's history. */
+        fun reset() = synchronized(this) { instance = null }
     }
 }

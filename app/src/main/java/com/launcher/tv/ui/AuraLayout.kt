@@ -119,6 +119,7 @@ fun AuraLayout(
     }
 
     val overlays = remember { OverlayState(initialQuickSettings) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     var options by remember { mutableStateOf<Tile?>(null) }
     val listState = rememberLazyListState()
     val firstCard = remember { FocusRequester() }
@@ -131,7 +132,7 @@ fun AuraLayout(
             removeHistory = callbacks.removeFromHistory,
             launchApp = callbacks.launchPackage,
             showApps = { tab = HomeTab.APPS },
-            connectTrakt = { overlays.account = true },
+            connectTrakt = { guarded(context) { overlays.account = true } },
             watchGame = { e, startOver -> callbacks.watchGame(e, null, startOver) },
             pickChannel = callbacks.openPicker,
             playMedia = callbacks.playMedia,
@@ -226,9 +227,9 @@ fun AuraLayout(
                 state = state,
                 onTab = { tab = it },
                 onRefresh = callbacks.refresh,
-                onControlCenter = { callbacks.refreshSystemState(); overlays.quick = true },
-                onSettings = { callbacks.loadIptvStatus(); overlays.settings = true },
-                onAccount = { overlays.account = true },
+                onControlCenter = { guarded(context) { callbacks.refreshSystemState(); overlays.quick = true } },
+                onSettings = { guarded(context) { callbacks.loadIptvStatus(); overlays.settings = true } },
+                onAccount = { overlays.profiles = true },
                 modifier = Modifier.align(Alignment.CenterStart).padding(start = 22.dp),
             )
 
@@ -608,7 +609,7 @@ private fun AuraSidebar(
         SideItem(R.drawable.ic_refresh, "Refresh", false, onRefresh)
         SideItem(R.drawable.ic_tune, "Control Center", false, onControlCenter)
         SideItem(R.drawable.ic_settings, "Settings", false, onSettings)
-        val badge = (if (state.trakt == TraktState.SignedIn) "T" else "") + (if (state.simkl == SimklState.SignedIn) "S" else "")
+        // Who's watching: the active profile's avatar.
         Surface(
             onClick = onAccount,
             modifier = Modifier.size(40.dp),
@@ -616,11 +617,7 @@ private fun AuraSidebar(
             colors = ClickableSurfaceDefaults.colors(containerColor = Color.Transparent, focusedContainerColor = Color.White),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
         ) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Box(Modifier.size(26.dp).background(Brush.linearGradient(listOf(Color(0xFFC9B6FF), Color(0xFF7FB2FF))), CircleShape), contentAlignment = Alignment.Center) {
-                    Text(badge.ifEmpty { "+" }, color = Color(0xFF0B0D12), fontSize = if (badge.length > 1) 9.sp else 11.sp, fontWeight = FontWeight.Bold)
-                }
-            }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Avatar(state.profile, 26.dp) }
         }
     }
 }

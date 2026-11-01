@@ -34,11 +34,11 @@ object WatchApps {
     private const val KEY = "watch_app"
 
     fun preferred(context: Context): String =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, HOMEBASE) ?: HOMEBASE
+        com.launcher.tv.data.Profiles.prefs(context, PREFS).getString(KEY, HOMEBASE) ?: HOMEBASE
 
     fun setPreferred(context: Context, key: String) {
         val v = if (WatchApp.byKey(key) != null) key else HOMEBASE
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, v).apply()
+        com.launcher.tv.data.Profiles.prefs(context, PREFS).edit().putString(KEY, v).apply()
     }
 
     /** The app movies and shows open in, if it's set and installed. */

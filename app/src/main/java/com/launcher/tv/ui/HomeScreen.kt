@@ -140,6 +140,12 @@ class HomeCallbacks(
     /** The picture-in-picture window: back to full screen, or stop it. */
     val pipFullScreen: () -> Unit = {},
     val pipStop: () -> Unit = {},
+    val setSaver: (String) -> Unit = {},
+    val switchProfile: (com.launcher.tv.data.Profile) -> Unit = {},
+    val addProfile: (String, Boolean) -> Unit = { _, _ -> },
+    val renameProfile: (com.launcher.tv.data.Profile, String) -> Unit = { _, _ -> },
+    val removeProfile: (com.launcher.tv.data.Profile) -> Unit = {},
+    val profilesShown: () -> Unit = {},
     /** Trakt client id, Trakt secret, TMDB key, Simkl client id (blank keeps what's saved). */
     val saveKeys: (String, String, String, String) -> Unit = { _, _, _, _ -> },
 )
@@ -200,7 +206,13 @@ fun HomeScreen(vm: HomeViewModel) {
             setTiviMateTuning = vm::setTiviMateTuning,
             testTiviMateTuning = vm::testTiviMateTuning,
             setLayout = vm::setLayout,
-            editTeams = { context.startActivity(Intent(context, TeamsActivity::class.java)) },
+            editTeams = { guarded(context) { context.startActivity(Intent(context, TeamsActivity::class.java)) } },
+            setSaver = vm::setSaver,
+            switchProfile = vm::switchProfile,
+            addProfile = vm::addProfile,
+            renameProfile = vm::renameProfile,
+            removeProfile = vm::removeProfile,
+            profilesShown = vm::profilesShown,
             refreshPhone = vm::refreshPhone,
             newPhonePin = vm::newPhonePin,
             togglePhonePage = vm::togglePhonePage,
@@ -258,7 +270,7 @@ fun HomeLayout(
             removeHistory = callbacks.removeFromHistory,
             launchApp = callbacks.launchPackage,
             showApps = { tab = HomeTab.APPS },
-            connectTrakt = { overlays.account = true },
+            connectTrakt = { guarded(context) { overlays.account = true } },
             watchGame = { e, startOver -> callbacks.watchGame(e, null, startOver) },
             pickChannel = callbacks.openPicker,
             playMedia = callbacks.playMedia,
@@ -319,8 +331,8 @@ fun HomeLayout(
                 onTab = { tab = it },
                 state = state,
                 onRefresh = callbacks.refresh,
-                onAccount = { overlays.account = true },
-                onSettings = { callbacks.refreshSystemState(); overlays.quick = true },
+                onAccount = { overlays.profiles = true },
+                onSettings = { guarded(context) { callbacks.refreshSystemState(); overlays.quick = true } },
             )
 
             // ---- tile row ----
@@ -615,7 +627,7 @@ fun HomeBaseTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXtream: () -> Unit, onAddM3u: () -> Unit, onDismiss: () -> Unit) {
+private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXtream: () -> Unit, onAddM3u: () -> Unit, onProfiles: () -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
@@ -666,6 +678,15 @@ private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXt
                 PillButton("HomeBase", { callbacks.setWatchApp(com.launcher.tv.player.WatchApps.HOMEBASE) }, primary = chosen == null)
                 state.watchApps.forEach { app -> PillButton(app.label, { callbacks.setWatchApp(app.key) }, primary = chosen == app) }
             }
+            SettingsSection(
+                "Screensaver",
+                "Photos drift slowly with where they were taken; Quotes light up line by line over them; Auto does both in turn. Scores is HomeBase's scoreboard.",
+            ) {
+                com.launcher.tv.dream.SaverStyle.entries.forEach { s ->
+                    PillButton(s.label, { callbacks.setSaver(s.key) }, primary = state.saver == s.key)
+                }
+                PillButton("Preview", callbacks.previewScreensaver)
+            }
             SettingsSection("Home screen layout", "Aura: glass over a daily photograph. Rows: streaming-app style. Tiles: console style.") {
                 PillButton("Aura", { callbacks.setLayout("aura") }, primary = state.layout != "tiles" && state.layout != "rows")
                 PillButton("Rows", { callbacks.setLayout("rows") }, primary = state.layout == "rows")
@@ -706,6 +727,13 @@ private fun SettingsDialog(state: HomeUiState, callbacks: HomeCallbacks, onAddXt
                     SimklState.NotConfigured -> Unit
                     else -> PillButton("Connect", callbacks.connectSimkl)
                 }
+            }
+            SettingsSection(
+                "Profiles",
+                "${state.profile.name} is watching. Everyone keeps their own Trakt and Simkl, teams, settings and Continue Watching." +
+                    if (state.profiles.any { it.kids }) " Kids profiles ask for the PIN for grown-up things." else "",
+            ) {
+                PillButton("Who's watching", onProfiles, primary = true)
             }
             SettingsSection("System", "Wi-Fi, display, inputs, accounts") {
                 PillButton("Android settings", callbacks.openAndroidSettings)
@@ -850,6 +878,8 @@ class OverlayState(quick: Boolean = false) {
     var phone by mutableStateOf(false)
     var settings by mutableStateOf(false)
     var account by mutableStateOf(false)
+    /** Who's watching. */
+    var profiles by mutableStateOf(false)
     /** A title whose Simkl page is shown as a QR code. */
     var simklLink by mutableStateOf<MediaItem?>(null)
 }
@@ -881,6 +911,28 @@ fun BoxScope.HomeOverlays(state: HomeUiState, callbacks: HomeCallbacks, o: Overl
             else -> { o.quick = false; callbacks.openSystemSettings(a) }
         }
     }
+    if (o.profiles || state.askProfiles) {
+        val close = { o.profiles = false; callbacks.profilesShown() }
+        if (androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current != null) {
+            androidx.activity.compose.BackHandler { close() }
+        }
+        ProfilePicker(
+            profiles = state.profiles,
+            activeId = state.profile.id,
+            onPick = { p ->
+                when {
+                    p.id == state.profile.id -> close()
+                    // Leaving a kids profile needs the PIN.
+                    state.profile.kids -> guarded(context) { callbacks.switchProfile(p) }
+                    else -> callbacks.switchProfile(p)
+                }
+            },
+            onEdit = { p -> guarded(context) { showEditProfile(context, p, onRename = { callbacks.renameProfile(p, it) }, onRemove = { callbacks.removeProfile(p) }) } },
+            onAdd = { guarded(context) { showAddProfile(context) { name, kids -> callbacks.addProfile(name, kids) } } },
+            onAccounts = { guarded(context) { close(); o.account = true } },
+            onDismiss = close,
+        )
+    }
     if (o.quick && aura) {
         AuraControlCenter(state, onAction = onQuick, onAccounts = { o.quick = false; o.account = true })
     } else if (o.quick) {
@@ -909,6 +961,7 @@ fun BoxScope.HomeOverlays(state: HomeUiState, callbacks: HomeCallbacks, o: Overl
             callbacks = callbacks,
             onAddXtream = { showXtreamForm(context) { s, u, p -> callbacks.addXtream(s, u, p) } },
             onAddM3u = { showM3uForm(context) { url, epg -> callbacks.addM3u(url, epg) } },
+            onProfiles = { o.settings = false; o.profiles = true },
             onDismiss = { o.settings = false },
         )
     }

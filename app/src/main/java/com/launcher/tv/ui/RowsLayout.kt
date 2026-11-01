@@ -97,6 +97,7 @@ fun RowsLayout(
     }
 
     val overlays = remember { OverlayState() }
+    val context = androidx.compose.ui.platform.LocalContext.current
     var options by remember { mutableStateOf<Tile?>(null) }
     var railFocused by remember { mutableStateOf(initialRailOpen) }
     val listState = rememberLazyListState()
@@ -109,7 +110,7 @@ fun RowsLayout(
             removeHistory = callbacks.removeFromHistory,
             launchApp = callbacks.launchPackage,
             showApps = { tab = HomeTab.APPS },
-            connectTrakt = { overlays.account = true },
+            connectTrakt = { guarded(context) { overlays.account = true } },
             watchGame = { e, startOver -> callbacks.watchGame(e, null, startOver) },
             pickChannel = callbacks.openPicker,
             playMedia = callbacks.playMedia,
@@ -208,7 +209,7 @@ fun RowsLayout(
             expanded = railFocused || initialRailOpen,
             onFocus = { railFocused = it },
             onTab = { tab = it },
-            onSettings = { callbacks.refreshSystemState(); overlays.quick = true },
+            onSettings = { guarded(context) { callbacks.refreshSystemState(); overlays.quick = true } },
             onRefresh = callbacks.refresh,
         )
 

@@ -23,7 +23,7 @@ import java.time.OffsetDateTime
  * Docs: https://trakt.docs.apiary.io
  */
 class TraktClient(context: Context) {
-    private val prefs = context.getSharedPreferences("trakt", Context.MODE_PRIVATE)
+    private val prefs = com.launcher.tv.data.Profiles.prefs(context, "trakt")
     private val appContext = context.applicationContext
     // Read each time: keys can be entered later on the TV or the phone page.
     private val clientId: String get() = com.launcher.tv.data.ApiKeys.traktId(appContext)

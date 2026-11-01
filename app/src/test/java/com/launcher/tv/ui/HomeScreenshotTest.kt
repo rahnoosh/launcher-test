@@ -102,6 +102,45 @@ class HomeScreenshotTest {
         }
     }
 
+    // ---- Photo screensaver (a painted sky stands in for the photograph) ----
+    @Test fun saverQuote() = saver(com.launcher.tv.dream.SaverStyle.QUOTES)
+    @Test fun saverPhoto() = saver(com.launcher.tv.dream.SaverStyle.PHOTOS)
+
+    private fun saver(style: com.launcher.tv.dream.SaverStyle) {
+        val zone = java.time.ZoneId.systemDefault()
+        val at = java.time.LocalDate.of(2026, 10, 31).atTime(16, 28).atZone(zone).toInstant().toEpochMilli()
+        val photo = com.launcher.tv.dream.paintedPhoto(SkyPhase.DUSK, "Larch trees in the Dolomites, Italy", "© Jane Doe/Getty Images")
+        paparazzi.snapshot {
+            HomeBaseTheme {
+                com.launcher.tv.dream.PhotoSaverLayout(
+                    sampleState().data, style, photo,
+                    quote = com.launcher.tv.data.sky.Quote("Be it ever so humble, there's no place like home.", "John Howard Payne"),
+                    now = at, animate = false,
+                )
+            }
+        }
+    }
+
+    /** Who's watching, with a kids profile. */
+    @Test fun profilePicker() {
+        val sky = buildSky(null, SkyPhase.NIGHT, null)
+        val people = listOf(
+            com.launcher.tv.data.Profile("main", "Alex"),
+            com.launcher.tv.data.Profile("p2", "Sam", color = 1),
+            com.launcher.tv.data.Profile("p3", "Kids", color = 2, kids = true),
+        )
+        paparazzi.snapshot {
+            HomeBaseTheme {
+                androidx.compose.runtime.CompositionLocalProvider(LocalBackdrop provides Backdrop(sky.tiny, androidx.compose.ui.unit.IntSize(1920, 1080))) {
+                    androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()) {
+                        SkyBackground(sky)
+                        ProfilePicker(people, "main", onPick = {}, onEdit = {}, onAdd = {}, onAccounts = {}, onDismiss = {})
+                    }
+                }
+            }
+        }
+    }
+
     // ---- Tiles layout ----
     @Test fun forYou() = snap(HomeTab.FOR_YOU, null)
     @Test fun forYouLiveGame() = snap(HomeTab.FOR_YOU, "g-espn-lal")

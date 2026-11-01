@@ -23,7 +23,7 @@ class HomeRepository(
     val trakt: TraktClient,
     val simkl: SimklClient = SimklClient(context),
 ) {
-    private val cacheFile = File(context.filesDir, "home_cache.json")
+    private val cacheFile = Profiles.file(context, "home_cache.json")
 
     suspend fun loadCached(): HomeData = withContext(Dispatchers.IO) {
         runCatching { Http.json.decodeFromString<HomeData>(cacheFile.readText()) }.getOrDefault(HomeData())
@@ -78,7 +78,7 @@ class HomeRepository(
     companion object {
         /** The last refreshed home data, without touching the network (phone page, alerts). */
         fun readCache(context: Context): HomeData =
-            runCatching { Http.json.decodeFromString(HomeData.serializer(), File(context.filesDir, "home_cache.json").readText()) }.getOrDefault(HomeData())
+            runCatching { Http.json.decodeFromString(HomeData.serializer(), Profiles.file(context, "home_cache.json").readText()) }.getOrDefault(HomeData())
     }
 
     private suspend fun <T> safe(block: suspend () -> T): T? =
