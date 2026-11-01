@@ -260,6 +260,7 @@ fun HomeLayout(
     }
 
     val overlays = remember { OverlayState(initialQuickSettings) }
+    val context = LocalContext.current
     val listState = rememberLazyListState()
     val firstTile = remember { FocusRequester() }
 
@@ -289,7 +290,6 @@ fun HomeLayout(
             iptv = state.iptv,
         )
     }
-    val context = LocalContext.current
 
     // Look up the channel for the selected game so the hero can say where it's on.
     LaunchedEffect(hero?.key, state.iptv) {
