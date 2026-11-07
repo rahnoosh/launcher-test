@@ -18,6 +18,23 @@ Cards for shows, movies and games open **TiviMate**. Data is cached on the box, 
 
 Teams and leagues are chosen on the TV (Quick settings → Your teams) or on the phone page.
 
+## Code checks
+
+Every push runs these checks on GitHub Actions. The badges are live: each shows whether its latest run
+passed or failed, and opens that run's report.
+
+| Check | Looks at | Fails on |
+|---|---|---|
+| [![Build APK](https://github.com/rahnoosh/launcher-test/actions/workflows/build.yml/badge.svg)](https://github.com/rahnoosh/launcher-test/actions/workflows/build.yml) | Builds the APK, runs the unit tests and renders the home screen screenshots | a build error or a failing test |
+| [![Android lint](https://github.com/rahnoosh/launcher-test/actions/workflows/android-lint.yml/badge.svg)](https://github.com/rahnoosh/launcher-test/actions/workflows/android-lint.yml) | Android-specific problems in the code, manifest and resources | any error (warnings are listed in the report) |
+| [![ktlint](https://github.com/rahnoosh/launcher-test/actions/workflows/ktlint.yml/badge.svg)](https://github.com/rahnoosh/launcher-test/actions/workflows/ktlint.yml) | Kotlin formatting, per `.editorconfig` | any formatting problem |
+| [![detekt](https://github.com/rahnoosh/launcher-test/actions/workflows/detekt.yml/badge.svg)](https://github.com/rahnoosh/launcher-test/actions/workflows/detekt.yml) | Code smells and likely bugs, per `config/detekt/detekt.yml` | anything new (findings already in the code are in `config/detekt/baseline.xml`) |
+| [![mobsfscan](https://github.com/rahnoosh/launcher-test/actions/workflows/mobsfscan.yml/badge.svg)](https://github.com/rahnoosh/launcher-test/actions/workflows/mobsfscan.yml) | Android security patterns | any security error, apart from the reviewed exceptions in `.mobsf` |
+| [![osv-scanner](https://github.com/rahnoosh/launcher-test/actions/workflows/osv-scanner.yml/badge.svg)](https://github.com/rahnoosh/launcher-test/actions/workflows/osv-scanner.yml) | Every library in the APK, against the OSV vulnerability database | any known vulnerability |
+
+To run them on your computer: `./gradlew ktlintCheck detekt :app:lintRelease`. `./gradlew ktlintFormat` fixes
+formatting.
+
 ## 1. Get API keys
 
 1. **Trakt** (required for the TV/movie rows): https://trakt.tv/oauth/applications → *New application*.

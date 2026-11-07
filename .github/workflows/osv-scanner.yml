@@ -1,4 +1,4 @@
-name: Lint
+name: osv-scanner
 
 on:
   push:
@@ -9,31 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  android-lint:
-    name: Android lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
-      # Report only: the build sets abortOnError = false so lint never blocks a sideload build.
-      - name: Android lint (release variant)
-        run: ./gradlew --no-daemon :app:lintRelease
-      - name: Lint report
-        if: always()
-        run: cat app/build/reports/lint-results-*.txt
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: android-lint-report
-          path: app/build/reports/lint-results-*
-          if-no-files-found: ignore
-
   osv-scanner:
-    name: Dependency vulnerabilities (osv-scanner)
+    name: osv-scanner
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -60,6 +37,7 @@ jobs:
         with:
           go-version: stable
           cache: false
+      # Fails if any of those libraries has a known vulnerability.
       - name: osv-scanner
         env:
           GOTOOLCHAIN: auto

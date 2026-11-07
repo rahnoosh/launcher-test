@@ -26,16 +26,16 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import com.launcher.tv.LauncherApp
 import com.launcher.tv.alerts.NowPlaying
-import com.launcher.tv.data.history.HistoryEntry
 import com.launcher.tv.data.MediaKind
+import com.launcher.tv.data.history.HistoryEntry
 import com.launcher.tv.data.history.WatchHistory
 import com.launcher.tv.data.simkl.SimklClient
 import com.launcher.tv.data.trakt.TraktClient
+import java.lang.ref.WeakReference
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.lang.ref.WeakReference
 
 /**
  * The "player bridge". Set HomeBase as TiviMate's external player and every movie/episode you
@@ -64,10 +64,13 @@ class PlayerActivity : ComponentActivity() {
     private var ended = false
     private var progressJob: Job? = null
     private var identifyJob: Job? = null
+
     /** Live TV started by HomeBase: no history, no scrobbling. */
     private var forceLive = false
+
     /** A full-game replay: kept in history (resumable) but never reported to Trakt or Simkl. */
     private var replay = false
+
     /** Started from HomeBase (not TiviMate's external-player call): may shrink into a window. */
     private var fromHomeBase = false
     private var eventId: String? = null

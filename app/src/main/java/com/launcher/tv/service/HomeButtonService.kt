@@ -14,12 +14,12 @@ import com.launcher.tv.alerts.OverlayCard
 import com.launcher.tv.player.Watch
 import com.launcher.tv.system.SleepTimer
 import com.launcher.tv.ui.GameActivity
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**

@@ -1,7 +1,7 @@
 package com.launcher.tv.ui
 
-import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.Spoilers
+import com.launcher.tv.data.SportsEvent
 
 /** What the large preview says about the selected card, shared by the Rows and Aura layouts. */
 data class BillboardInfo(

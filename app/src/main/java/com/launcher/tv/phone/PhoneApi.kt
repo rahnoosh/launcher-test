@@ -11,8 +11,8 @@ import com.launcher.tv.data.HomeRepository
 import com.launcher.tv.data.Http
 import com.launcher.tv.data.MediaItem
 import com.launcher.tv.data.MediaKind
-import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.Spoilers
+import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.iptv.ChannelFinder
 import com.launcher.tv.data.iptv.IptvChannel
 import com.launcher.tv.data.iptv.IptvLibrary
@@ -35,6 +35,7 @@ import com.launcher.tv.player.TiviMateTuner
 import com.launcher.tv.player.Watch
 import com.launcher.tv.system.SleepTimer
 import com.launcher.tv.update.UpdateManager
+import java.security.SecureRandom
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -52,7 +53,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
-import java.security.SecureRandom
 
 /**
  * The phone page's API. Everything except the page itself and /api/login needs the PIN cookie;

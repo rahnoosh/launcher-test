@@ -11,7 +11,9 @@ import kotlin.concurrent.thread
  */
 object PhoneLink {
     private val PORTS = listOf(8686, 8687, 8688, 8689, 0)
+
     @Volatile private var server: PhoneServer? = null
+
     @Volatile private var auth: PhoneAuth? = null
 
     private fun prefs(c: Context) = c.getSharedPreferences("phone_page", Context.MODE_PRIVATE)

@@ -3,10 +3,10 @@ package com.launcher.tv.data
 import android.content.Context
 import android.content.SharedPreferences
 import com.launcher.tv.data.history.WatchHistory
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.ListSerializer
 import java.io.File
 import java.util.UUID
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 
 /** One person in the house. */
 @Serializable

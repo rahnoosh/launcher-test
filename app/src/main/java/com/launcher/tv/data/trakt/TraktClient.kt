@@ -6,6 +6,8 @@ import com.launcher.tv.data.HttpException
 import com.launcher.tv.data.MediaItem
 import com.launcher.tv.data.MediaKind
 import com.launcher.tv.data.tmdb.Tmdb
+import java.time.LocalDate
+import java.time.OffsetDateTime
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -13,8 +15,6 @@ import kotlinx.coroutines.delay
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import java.time.LocalDate
-import java.time.OffsetDateTime
 
 /**
  * Trakt API client: device-code sign-in (built for TVs), next episodes,
@@ -24,6 +24,7 @@ import java.time.OffsetDateTime
 class TraktClient(context: Context) {
     private val prefs = com.launcher.tv.data.Profiles.prefs(context, "trakt")
     private val appContext = context.applicationContext
+
     // Read each time: keys can be entered later on the TV or the phone page.
     private val clientId: String get() = com.launcher.tv.data.ApiKeys.traktId(appContext)
     private val clientSecret: String get() = com.launcher.tv.data.ApiKeys.traktSecret(appContext)

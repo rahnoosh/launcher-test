@@ -1,9 +1,9 @@
 package com.launcher.tv.ui
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class SkyPhaseTest {
     private val zone = ZoneId.of("America/Chicago")

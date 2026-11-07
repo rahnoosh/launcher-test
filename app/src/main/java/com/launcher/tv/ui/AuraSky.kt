@@ -41,12 +41,12 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.launcher.tv.data.sky.DailyPhoto
 import com.launcher.tv.data.sky.Weather
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 /** Where the sun is, which sets the light over the photograph. */
 enum class SkyPhase(val label: String) {
@@ -122,15 +122,17 @@ private fun boxBlur(bmp: Bitmap, radius: Int, passes: Int) {
     var tmp = IntArray(w * h)
     repeat(passes) {
         for (horizontal in listOf(true, false)) {
-            for (y in 0 until h) for (x in 0 until w) {
-                var a = 0; var r = 0; var g = 0; var b = 0; var n = 0
-                for (k in -radius..radius) {
-                    val xx = if (horizontal) (x + k).coerceIn(0, w - 1) else x
-                    val yy = if (horizontal) y else (y + k).coerceIn(0, h - 1)
-                    val p = px[yy * w + xx]
-                    a += p ushr 24; r += (p shr 16) and 0xFF; g += (p shr 8) and 0xFF; b += p and 0xFF; n++
+            for (y in 0 until h) {
+                for (x in 0 until w) {
+                    var a = 0; var r = 0; var g = 0; var b = 0; var n = 0
+                    for (k in -radius..radius) {
+                        val xx = if (horizontal) (x + k).coerceIn(0, w - 1) else x
+                        val yy = if (horizontal) y else (y + k).coerceIn(0, h - 1)
+                        val p = px[yy * w + xx]
+                        a += p ushr 24; r += (p shr 16) and 0xFF; g += (p shr 8) and 0xFF; b += p and 0xFF; n++
+                    }
+                    tmp[y * w + x] = ((a / n) shl 24) or ((r / n) shl 16) or ((g / n) shl 8) or (b / n)
                 }
-                tmp[y * w + x] = ((a / n) shl 24) or ((r / n) shl 16) or ((g / n) shl 8) or (b / n)
             }
             val t = px; px = tmp; tmp = t
         }

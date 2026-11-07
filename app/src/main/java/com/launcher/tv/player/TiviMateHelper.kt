@@ -5,15 +5,15 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import com.launcher.tv.LauncherApp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import com.launcher.tv.alerts.OverlayBus
 import com.launcher.tv.alerts.OverlayCard
 import com.launcher.tv.data.AppsRepository
 import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.iptv.IptvChannel
 import com.launcher.tv.service.HomeButtonService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * TiviMate has no way for other apps to open a specific channel, so this opens TiviMate and keeps a

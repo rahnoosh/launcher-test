@@ -18,6 +18,7 @@ object ApiKeys {
     fun traktId(c: Context): String = stored(c, "trakt_id") ?: BuildConfig.TRAKT_CLIENT_ID
     fun traktSecret(c: Context): String = stored(c, "trakt_secret") ?: BuildConfig.TRAKT_CLIENT_SECRET
     fun tmdb(c: Context): String = stored(c, "tmdb") ?: BuildConfig.TMDB_API_KEY
+
     /** Simkl's device sign-in needs only the client id (no secret). */
     fun simklId(c: Context): String = stored(c, "simkl_id").orEmpty()
 

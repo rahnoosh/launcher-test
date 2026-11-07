@@ -1,0 +1,9 @@
+---
+# mobsfscan (the mobsfscan workflow). These rules were reviewed and don't apply to HomeBase.
+- ignore-rules:
+    # Cleartext HTTP is on on purpose: most IPTV providers only serve http:// (see AndroidManifest.xml).
+    - android_manifest_usescleartext
+    # Task hijacking (StrandHogg 1 and 2) needs targetSdk below 28 / 29. mobsfscan looks for
+    # targetSdk in the manifest, but HomeBase sets it (35) in app/build.gradle.kts.
+    - android_task_hijacking1
+    - android_task_hijacking2

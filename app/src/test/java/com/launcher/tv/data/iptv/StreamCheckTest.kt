@@ -1,8 +1,8 @@
 package com.launcher.tv.data.iptv
 
 import com.launcher.tv.data.HomeData
-import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.Spoilers
+import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.TeamInfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

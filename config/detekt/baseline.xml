@@ -1,0 +1,99 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:Catchup.kt$Catchup$xt != null &amp;&amp; (mode == null || mode == "xc" || mode == "default" || template == null)</ID>
+    <ID>ComplexCondition:ChannelFinder.kt$ChannelFinder.Companion$t.any { it == "FHD" || it == "HD" || it == "UHD" || it == "4K" }</ID>
+    <ID>ComplexCondition:Hero.kt$(e.live || e.finished) &amp;&amp; away.score == null &amp;&amp; home.score == null</ID>
+    <ID>ComplexCondition:HomeButtonService.kt$HomeButtonService$o != null &amp;&amp; ((o.isShowing &amp;&amp; o.current?.onOk != null) || swallowNextUp)</ID>
+    <ID>ComplexCondition:PhotoSaver.kt$home != null &amp;&amp; away != null &amp;&amp; e.live &amp;&amp; (home.score != null || away.score != null)</ID>
+    <ID>ComplexCondition:PlayerActivity.kt$PlayerActivity.Companion$trakt == null &amp;&amp; simkl == null &amp;&amp; tmdb == null &amp;&amp; imdb == null</ID>
+    <ID>ComplexCondition:Scrobbler.kt$Scrobbler.Companion$m.simklId != null &amp;&amp; (seasonless || !m.anime || western.isEmpty())</ID>
+    <ID>ComplexCondition:XtreamClient.kt$XtreamClient.Companion$(url.scheme == "http" &amp;&amp; url.port == 80) || (url.scheme == "https" &amp;&amp; url.port == 443)</ID>
+    <ID>CyclomaticComplexMethod:BillboardInfo.kt$fun billboardInfo(tile: Tile, state: HomeUiState): BillboardInfo</ID>
+    <ID>CyclomaticComplexMethod:Catchup.kt$Catchup$fun url(ch: IptvChannel, startMillis: Long, durationMinutes: Int, now: Long = System.currentTimeMillis(), zone: ZoneId = ZoneOffset.UTC): String?</ID>
+    <ID>CyclomaticComplexMethod:ChannelFinder.kt$ChannelFinder.Companion$fun score( event: SportsEvent, channels: List&lt;IptvChannel&gt;, learned: Map&lt;String, String&gt;, ): List&lt;ChannelCandidate&gt;</ID>
+    <ID>CyclomaticComplexMethod:ChannelFinder.kt$ChannelFinder.Companion$private fun leagueWords(event: SportsEvent): List&lt;String&gt;</ID>
+    <ID>CyclomaticComplexMethod:GameDetails.kt$GameDetails$fun parseSummary(root: JsonObject, league: String): GameDetail.Team</ID>
+    <ID>CyclomaticComplexMethod:HomeRepository.kt$HomeRepository$suspend fun refresh(previous: HomeData, simklSync: SimklClient.Sync = SimklClient.Sync.NONE): HomeData</ID>
+    <ID>CyclomaticComplexMethod:LiveAlertEngine.kt$LiveAlertEngine$internal suspend fun tick(): Long</ID>
+    <ID>CyclomaticComplexMethod:LiveAlertEngine.kt$LiveAlertEngine$private suspend fun compare(before: SportsEvent?, now: SportsEvent, time: Long)</ID>
+    <ID>CyclomaticComplexMethod:M3uParser.kt$M3uParser$fun parse(lines: Sequence&lt;String&gt;, sourceId: String): Result</ID>
+    <ID>CyclomaticComplexMethod:PhoneApi.kt$PhoneApi$private fun applySetting(key: String, value: JsonElement?)</ID>
+    <ID>CyclomaticComplexMethod:PhoneApi.kt$PhoneApi$private suspend fun play(ref: String, action: String): Response</ID>
+    <ID>CyclomaticComplexMethod:PhoneApi.kt$PhoneApi$private suspend fun route(r: Request): Response</ID>
+    <ID>CyclomaticComplexMethod:PhotoArchive.kt$PhotoArchive$suspend fun photos(context: Context): List&lt;Photo&gt;</ID>
+    <ID>CyclomaticComplexMethod:PlayerActivity.kt$PlayerActivity$private fun entry(positionMs: Long, durationMs: Long): HistoryEntry</ID>
+    <ID>CyclomaticComplexMethod:PlayerActivity.kt$PlayerActivity$private fun start(intent: Intent)</ID>
+    <ID>CyclomaticComplexMethod:Scrobbler.kt$Scrobbler.Companion$fun simklBody(m: Match, progress: Float): JsonObject?</ID>
+    <ID>CyclomaticComplexMethod:SportsRepository.kt$SportsRepository$private fun parseEspnEvent( el: JsonElement, league: String, useEventName: Boolean = false, includeFinished: Boolean = false, ): SportsEvent?</ID>
+    <ID>CyclomaticComplexMethod:StreamProbe.kt$StreamProbe$fun rating(r: ProbeResult, c: ChannelCandidate): Int</ID>
+    <ID>CyclomaticComplexMethod:Tiles.kt$fun buildRows(tab: HomeTab, s: HomeUiState): List&lt;HomeRow&gt;</ID>
+    <ID>CyclomaticComplexMethod:Tiles.kt$fun buildTiles(tab: HomeTab, s: HomeUiState): List&lt;Tile&gt;</ID>
+    <ID>CyclomaticComplexMethod:TitleParser.kt$TitleParser$fun parse(rawTitle: String?, url: String?): Parsed</ID>
+    <ID>CyclomaticComplexMethod:Watch.kt$Watch$suspend fun game( context: Context, event: SportsEvent, choice: ChannelCandidate? = null, startOver: Boolean = false, interactive: Boolean = true, known: List&lt;ChannelCandidate&gt;? = null, ): Result</ID>
+    <ID>CyclomaticComplexMethod:XmltvParser.kt$XmltvParser$fun parse(reader: Reader, from: Long, to: Long, maxPerChannel: Int = 60): Result</ID>
+    <ID>DestructuringDeclarationWithTooManyEntries:Catchup.kt$Catchup$val (base, user, pass, id) = xt.destructured</ID>
+    <ID>LongMethod:BillboardInfo.kt$fun billboardInfo(tile: Tile, state: HomeUiState): BillboardInfo</ID>
+    <ID>LongMethod:GameActivity.kt$GameActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
+    <ID>LongMethod:GameDetails.kt$GameDetails$fun parseSummary(root: JsonObject, league: String): GameDetail.Team</ID>
+    <ID>LongMethod:PhoneApi.kt$PhoneApi$private suspend fun route(r: Request): Response</ID>
+    <ID>LongParameterList:CatalogMatcher.kt$CatalogMatcher$(all: List&lt;T&gt;, title: String, year: Int?, tmdbId: Long?, name: (T) -&gt; String, tmdb: (T) -&gt; String?, yearOf: (T) -&gt; Int?)</ID>
+    <ID>LongParameterList:GamePage.kt$GameActions$( val watch: () -&gt; Unit = {}, val startOver: () -&gt; Unit = {}, /** A finished game, whole, from your provider's recordings. */ val replay: () -&gt; Unit = {}, val channels: () -&gt; Unit = {}, val highlights: () -&gt; Unit = {}, val revealScore: () -&gt; Unit = {}, val compare: () -&gt; Unit = {}, val iptv: Boolean = false, )</ID>
+    <ID>LongParameterList:Hero.kt$HomeActions$( val openTiviMate: () -&gt; Unit, val play: (com.launcher.tv.data.history.HistoryEntry) -&gt; Unit, val removeHistory: (com.launcher.tv.data.history.HistoryEntry) -&gt; Unit, val launchApp: (String) -&gt; Unit, val showApps: () -&gt; Unit, val connectTrakt: () -&gt; Unit, val watchGame: (SportsEvent, Boolean) -&gt; Unit = { _, _ -&gt; }, val pickChannel: (SportsEvent) -&gt; Unit = {}, val openGame: (SportsEvent) -&gt; Unit = {}, val highlights: (SportsEvent) -&gt; Unit = {}, val revealScore: (SportsEvent) -&gt; Unit = {}, val editTeams: () -&gt; Unit = {}, val compareProviders: (SportsEvent) -&gt; Unit = {}, val playMedia: (com.launcher.tv.data.MediaItem) -&gt; Unit = {}, /** Shows a QR code for the title's Simkl page. */ val simklPage: (com.launcher.tv.data.MediaItem) -&gt; Unit = {}, /** The picture-in-picture window: back to full screen, or stop it. */ val pipFullScreen: () -&gt; Unit = {}, val pipStop: () -&gt; Unit = {}, /** Stremio / Nuvio: open the movie or episode there; [playHere] uses your providers regardless. */ val watchIn: (com.launcher.tv.data.MediaItem, com.launcher.tv.player.WatchApp) -&gt; Unit = { _, _ -&gt; }, val playHere: (com.launcher.tv.data.MediaItem) -&gt; Unit = {}, val watchApps: List&lt;com.launcher.tv.player.WatchApp&gt; = emptyList(), /** The app chosen in Settings for movies and shows, if installed. */ val preferredApp: com.launcher.tv.player.WatchApp? = null, /** IPTV login saved: Watch/Play go straight to the stream. */ val iptv: Boolean = false, )</ID>
+    <ID>LongParameterList:HomeScreen.kt$HomeCallbacks$( val refresh: () -&gt; Unit = {}, val connectTrakt: () -&gt; Unit = {}, val cancelTraktAuth: () -&gt; Unit = {}, val signOutTrakt: () -&gt; Unit = {}, val connectSimkl: () -&gt; Unit = {}, val cancelSimklAuth: () -&gt; Unit = {}, val signOutSimkl: () -&gt; Unit = {}, val launchPackage: (String) -&gt; Unit = {}, val removeFromHistory: (HistoryEntry) -&gt; Unit = {}, val play: (HistoryEntry) -&gt; Unit = {}, val watchGame: (SportsEvent, ChannelCandidate?, Boolean) -&gt; Unit = { _, _, _ -&gt; }, val resolveChannels: (SportsEvent) -&gt; Unit = {}, val openPicker: (SportsEvent) -&gt; Unit = {}, val closePicker: () -&gt; Unit = {}, val playMedia: (MediaItem) -&gt; Unit = {}, val playHere: (MediaItem) -&gt; Unit = {}, val watchIn: (MediaItem, com.launcher.tv.player.WatchApp) -&gt; Unit = { _, _ -&gt; }, val setWatchApp: (String) -&gt; Unit = {}, val addXtream: (String, String, String) -&gt; Unit = { _, _, _ -&gt; }, val addM3u: (String, String) -&gt; Unit = { _, _ -&gt; }, val removeSource: (String) -&gt; Unit = {}, val loadIptvStatus: () -&gt; Unit = {}, val setAlerts: (Boolean) -&gt; Unit = {}, val setScoringAlerts: (Boolean) -&gt; Unit = {}, val openAndroidSettings: () -&gt; Unit = {}, val openSystemSettings: (QuickAction) -&gt; Unit = {}, val openGame: (SportsEvent) -&gt; Unit = {}, val highlights: (SportsEvent) -&gt; Unit = {}, val cycleSleepTimer: () -&gt; Unit = {}, val previewScreensaver: () -&gt; Unit = {}, val refreshSystemState: () -&gt; Unit = {}, val setSpoilers: (Boolean) -&gt; Unit = {}, val revealScore: (SportsEvent) -&gt; Unit = {}, val compareProviders: (SportsEvent) -&gt; Unit = {}, val closeStreamCheck: () -&gt; Unit = {}, val watchFromCheck: (CheckRow) -&gt; Unit = {}, val tiviMateFromCheck: (CheckRow) -&gt; Unit = {}, val setTiviMateTuning: (Boolean) -&gt; Unit = {}, val setLayout: (String) -&gt; Unit = {}, val editTeams: () -&gt; Unit = {}, val testTiviMateTuning: () -&gt; Unit = {}, val refreshPhone: () -&gt; Unit = {}, val newPhonePin: () -&gt; Unit = {}, val togglePhonePage: () -&gt; Unit = {}, val updateAction: () -&gt; Unit = {}, /** The picture-in-picture window: back to full screen, or stop it. */ val pipFullScreen: () -&gt; Unit = {}, val pipStop: () -&gt; Unit = {}, val setSaver: (String) -&gt; Unit = {}, val switchProfile: (com.launcher.tv.data.Profile) -&gt; Unit = {}, val addProfile: (String, Boolean) -&gt; Unit = { _, _ -&gt; }, val renameProfile: (com.launcher.tv.data.Profile, String) -&gt; Unit = { _, _ -&gt; }, val removeProfile: (com.launcher.tv.data.Profile) -&gt; Unit = {}, val profilesShown: () -&gt; Unit = {}, /** Trakt client id, Trakt secret, TMDB key, Simkl client id (blank keeps what's saved). */ val saveKeys: (String, String, String, String) -&gt; Unit = { _, _, _, _ -&gt; }, )</ID>
+    <ID>LongParameterList:LiveAlertEngine.kt$LiveAlertEngine$( private val enabled: () -&gt; Boolean, private val scoringOn: () -&gt; Boolean, private val store: FiredStore, private val schedule: suspend () -&gt; HomeData?, private val scoreboard: suspend (league: String) -&gt; List&lt;SportsEvent&gt;?, private val clock: () -&gt; Long, private val show: suspend (LiveAlert) -&gt; Unit, /** Spoiler mode: true if this game's score must not be shown. */ private val hidesScore: (SportsEvent) -&gt; Boolean = { false }, )</ID>
+    <ID>LongParameterList:StreamCheckTest.kt$StreamCheckTest$(src: String, id: String, name: String, score: Int, reason: String = "network", archive: Boolean = false)</ID>
+    <ID>LongParameterList:StreamProbe.kt$StreamProbe$(url: String, text: String, headers: Map&lt;String, String&gt;, t0: Long, budgetMs: Long, maxBytes: Long)</ID>
+    <ID>LongParameterList:TitleParserTest.kt$TitleParserTest$(title: String?, url: String?, kind: Kind, name: String, year: Int? = null, s: Int? = null, e: Int? = null)</ID>
+    <ID>LongParameterList:TrackerMergeTest.kt$TrackerMergeTest$( id: String, title: String, year: Int?, season: Int?, episode: Int?, sort: Long? = null, trakt: Long? = null, simkl: Long? = null, tmdb: Long? = null, imdb: String? = null, time: Long? = null, )</ID>
+    <ID>LongParameterList:Watch.kt$Watch$( context: Context, event: SportsEvent, choice: ChannelCandidate? = null, startOver: Boolean = false, interactive: Boolean = true, known: List&lt;ChannelCandidate&gt;? = null, )</ID>
+    <ID>LongParameterList:Watch.kt$Watch$( context: Context, library: IptvLibrary, event: SportsEvent, choice: ChannelCandidate?, candidates: List&lt;ChannelCandidate&gt;, now: Long, )</ID>
+    <ID>LoopWithTooManyJumpStatements:ChannelFinder.kt$ChannelFinder.Companion$for</ID>
+    <ID>LoopWithTooManyJumpStatements:Names.kt$Names$for</ID>
+    <ID>LoopWithTooManyJumpStatements:PhotoArchive.kt$PhotoArchive$for</ID>
+    <ID>LoopWithTooManyJumpStatements:TitleParser.kt$TitleParser$while</ID>
+    <ID>MatchingDeclarationName:ControlCenter.kt$QuickAction</ID>
+    <ID>MatchingDeclarationName:GamePage.kt$GameActions</ID>
+    <ID>MatchingDeclarationName:Hero.kt$HomeActions</ID>
+    <ID>MatchingDeclarationName:PhonePanel.kt$PhoneInfo</ID>
+    <ID>MatchingDeclarationName:StreamCheck.kt$StreamCheckState</ID>
+    <ID>MatchingDeclarationName:TeamsScreen.kt$TeamsActivity : ComponentActivity</ID>
+    <ID>MaxLineLength:AuraControlCenter.kt$GlassTile(R.drawable.ic_download, if (update != null) "Update" else "Updates", update?.versionName ?: com.launcher.tv.BuildConfig.VERSION_NAME, highlighted = update != null) { onAction(QuickAction.UPDATE) }</ID>
+    <ID>MaxLineLength:AuraControlCenter.kt$Text("$kicker · ${game.league.uppercase()}", color = if (game.live) Color(0xFFFF8A80) else Color.White.copy(alpha = 0.65f), fontSize = 8.5.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, maxLines = 1)</ID>
+    <ID>MaxLineLength:AuraLayout.kt$Box</ID>
+    <ID>MaxLineLength:AuraLayout.kt$Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to away.mainColor().copy(alpha = 0.5f), 0.45f to Color.Transparent, 0.55f to Color.Transparent, 1f to home.mainColor().copy(alpha = 0.5f))))</ID>
+    <ID>MaxLineLength:BillboardInfo.kt$overview = "Add or remove teams from the NFL, college football, NBA, WNBA, college basketball, MLB, NHL, MLS, Premier League, Champions League and LaLiga, plus fights, F1, golf majors and tennis Grand Slams."</ID>
+    <ID>MaxLineLength:Components.kt$Text(item.title, color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 14.sp, modifier = Modifier.padding(top = 4.dp))</ID>
+    <ID>MaxLineLength:Components.kt$Text(tile.title, color = Color.White, fontSize = (w * 0.1f).sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp))</ID>
+    <ID>MaxLineLength:ProfilePicker.kt$colors = ClickableSurfaceDefaults.colors(containerColor = Color.Transparent, focusedContainerColor = Color.White, contentColor = Color.White, focusedContentColor = Color(0xFF0B0D12))</ID>
+    <ID>MaxLineLength:RowsLayout.kt$Text("Connect Trakt\nor Simkl", Modifier.align(Alignment.Center), color = Accent, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)</ID>
+    <ID>MaxLineLength:TitleParser.kt$TitleParser$"""(?i)\b(4K|UHD|FHD|HD|SD|HEVC|H\.?26[45]|x26[45]|HDR10\+?|HDR|DV|DoVi|2160p|1080p|720p|480p|MULTI|MULTISUB|SUBS?|DUAL|AUDIO|WEB-?DL|WEBRip|BluRay|BRRip|REMUX|10bit|AAC|AC3|EAC3|DDP?5\.1|ATMOS)\b"""</ID>
+    <ID>MaxLineLength:XtreamParsingTest.kt$XtreamParsingTest$val root = Json.parseToJsonElement("""{"epg_listings":[{"id":"1","title":"$title","description":"","start":"2026-11-01 13:00:00","end":"2026-11-01 16:30:00","start_timestamp":"1793552400","stop_timestamp":"1793565000"}]}""").jsonObject</ID>
+    <ID>NestedBlockDepth:PhoneApi.kt$PhoneApi$private fun restore(b: JsonObject)</ID>
+    <ID>NestedBlockDepth:XmltvParser.kt$XmltvParser$fun parse(reader: Reader, from: Long, to: Long, maxPerChannel: Int = 60): Result</ID>
+    <ID>SwallowedException:HomeRepository.kt$HomeRepository$e: Exception</ID>
+    <ID>SwallowedException:PlayerActivity.kt$PlayerActivity$e: IllegalStateException</ID>
+    <ID>SwallowedException:SimklClient.kt$SimklClient$e: IOException</ID>
+    <ID>SwallowedException:SportsRepository.kt$SportsRepository$e: Exception</ID>
+    <ID>ThrowsCount:SimklClient.kt$SimklClient$private suspend fun authed(call: suspend (Map&lt;String, String&gt;) -&gt; String): String</ID>
+    <ID>TooManyFunctions:ApiKeys.kt$ApiKeys</ID>
+    <ID>TooManyFunctions:GameDetails.kt$GameDetails</ID>
+    <ID>TooManyFunctions:HomeViewModel.kt$HomeViewModel : AndroidViewModel</ID>
+    <ID>TooManyFunctions:IptvLibrary.kt$IptvLibrary</ID>
+    <ID>TooManyFunctions:M3uSource.kt$M3uSource : IptvSource</ID>
+    <ID>TooManyFunctions:PhoneApi.kt$PhoneApi</ID>
+    <ID>TooManyFunctions:PhoneLink.kt$PhoneLink</ID>
+    <ID>TooManyFunctions:PlayerActivity.kt$PlayerActivity : ComponentActivity</ID>
+    <ID>TooManyFunctions:PlayerActivity.kt$PlayerActivity$Companion</ID>
+    <ID>TooManyFunctions:Profiles.kt$Profiles</ID>
+    <ID>TooManyFunctions:SimklClient.kt$SimklClient</ID>
+    <ID>TooManyFunctions:SimklData.kt$SimklData</ID>
+    <ID>TooManyFunctions:Spoilers.kt$Spoilers</ID>
+    <ID>TooManyFunctions:SportsRepository.kt$SportsRepository</ID>
+    <ID>TooManyFunctions:TraktClient.kt$TraktClient</ID>
+    <ID>TooManyFunctions:XtreamClient.kt$XtreamClient : IptvSource</ID>
+    <ID>UseCheckOrError:StreamProbe.kt$StreamProbe$throw IllegalStateException("Empty response")</ID>
+    <ID>UseCheckOrError:StreamProbe.kt$StreamProbe$throw IllegalStateException("HTTP ${resp.code}")</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -138,6 +138,7 @@ private fun TeamCards(d: GameDetail.Team, awayAbbr: String, homeAbbr: String) {
         } else {
             val cols = line.labels.takeLast(9)
             val drop = line.labels.size - cols.size
+
             @Composable
             fun RowOf(first: String, cells: List<String>, total: String?, bold: Boolean) {
                 Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {

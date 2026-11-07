@@ -10,6 +10,9 @@ import com.launcher.tv.data.MediaKind
 import com.launcher.tv.data.obj
 import com.launcher.tv.data.str
 import com.launcher.tv.data.tmdb.Tmdb
+import java.io.File
+import java.io.IOException
+import java.net.URLEncoder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -24,9 +27,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
-import java.io.File
-import java.io.IOException
-import java.net.URLEncoder
 
 /**
  * Simkl, alongside (or instead of) Trakt: device sign-in with a QR code, a local copy of your
@@ -190,8 +190,10 @@ class SimklClient(context: Context) {
     enum class Sync {
         /** Use the local library as it is (screensaver, background refreshes). */
         NONE,
+
         /** On opening the home screen: at most every 20 minutes, or sooner after you've watched something. */
         IF_DUE,
+
         /** You asked for it (refresh, just signed in). */
         NOW,
     }

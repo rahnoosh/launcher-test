@@ -4,6 +4,10 @@ import android.content.Context
 import com.launcher.tv.data.Http
 import com.launcher.tv.data.HttpException
 import com.launcher.tv.player.TitleParser
+import java.io.BufferedInputStream
+import java.io.File
+import java.io.InputStream
+import java.util.zip.GZIPInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -13,10 +17,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.encodeToStream
 import okhttp3.Request
-import java.io.BufferedInputStream
-import java.io.File
-import java.io.InputStream
-import java.util.zip.GZIPInputStream
 
 /**
  * Provider given as an M3U playlist URL (plus optional XMLTV guide). Live channels feed the channel
@@ -34,10 +34,15 @@ class M3uSource(context: Context, override val config: SourceConfig.M3u) : IptvS
     private data class EpgCache(val programmes: Map<String, List<EpgEntry>>, val names: Map<String, String>)
 
     @Volatile private var playlist: PlaylistCache? = null
+
     @Volatile private var playlistAt = 0L
+
     @Volatile private var epg: EpgCache? = null
+
     @Volatile private var epgAt = 0L
+
     @Volatile private var episodeIndex: Map<String, List<Pair<TitleParser.Parsed, M3uVod>>>? = null
+
     @Volatile private var movieIndex: Map<String, List<Pair<TitleParser.Parsed, M3uVod>>>? = null
 
     @OptIn(ExperimentalSerializationApi::class)

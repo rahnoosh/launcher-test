@@ -1,0 +1,37 @@
+# detekt (./gradlew detekt), on top of detekt's default rules, matched to HomeBase's style:
+# compact lines, early returns and Compose UI. Findings already in the code are listed in
+# baseline.xml, so the check fails only on new ones (./gradlew detektBaseline rewrites it).
+
+complexity:
+  # Compose screens are long, branchy functions with many parameters by nature.
+  LongMethod:
+    ignoreAnnotated: ['Composable']
+  CyclomaticComplexMethod:
+    ignoreAnnotated: ['Composable']
+  LongParameterList:
+    ignoreAnnotated: ['Composable']
+  TooManyFunctions:
+    ignoreAnnotatedFunctions: ['Composable']
+
+exceptions:
+  # Network code catches Exception on purpose and rethrows CancellationException first.
+  TooGenericExceptionCaught:
+    active: false
+  InstanceOfCheckForException:
+    active: false
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][A-Za-z0-9_]*'
+
+style:
+  # Sizes, colours and API timings read better inline.
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    maxLineLength: 200
+  # Early returns are the house style.
+  ReturnCount:
+    active: false

@@ -50,8 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import com.launcher.tv.data.HomeData
-import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.Spoilers
+import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.sky.PhotoArchive
 import com.launcher.tv.data.sky.Quote
 import com.launcher.tv.data.sky.Quotes
@@ -67,11 +67,11 @@ import com.launcher.tv.ui.glass
 import com.launcher.tv.ui.leagueColor
 import com.launcher.tv.ui.skyPhase
 import com.launcher.tv.ui.timeText
+import java.time.Instant
+import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import java.time.Instant
-import java.time.ZoneId
 
 /** What the screensaver shows. */
 enum class SaverStyle(val key: String, val label: String) {
@@ -79,6 +79,7 @@ enum class SaverStyle(val key: String, val label: String) {
     AUTO("auto", "Auto"),
     PHOTOS("photos", "Photos"),
     QUOTES("quotes", "Quotes"),
+
     /** HomeBase's original: scores and tonight's schedule. */
     SCORES("scores", "Scores");
 

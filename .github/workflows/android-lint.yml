@@ -1,0 +1,33 @@
+name: Android lint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-lint:
+    name: Android lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      # Fails on lint errors; warnings are only listed (lint { abortOnError } in app/build.gradle.kts).
+      - name: Android lint (release variant)
+        run: ./gradlew --no-daemon :app:lintRelease
+      - name: Report
+        if: always()
+        run: cat app/build/reports/lint-results-*.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-lint-report
+          path: app/build/reports/lint-results-*
+          if-no-files-found: ignore

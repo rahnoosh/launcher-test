@@ -1,5 +1,10 @@
 package com.launcher.tv.ui
 
+import android.app.AlertDialog
+import android.content.Intent
+import android.text.InputType
+import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
@@ -10,8 +15,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -22,16 +25,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,8 +55,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -58,30 +65,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.tv.material3.LocalContentColor
-import android.app.AlertDialog
-import android.text.InputType
-import android.widget.EditText
-import android.widget.LinearLayout
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.launcher.tv.R
 import com.launcher.tv.data.AppsRepository
-import com.launcher.tv.data.history.HistoryEntry
 import com.launcher.tv.data.MediaItem
+import com.launcher.tv.data.Spoilers
 import com.launcher.tv.data.SportsEvent
+import com.launcher.tv.data.history.HistoryEntry
 import com.launcher.tv.data.iptv.ChannelCandidate
 import com.launcher.tv.data.iptv.CheckRow
-import com.launcher.tv.data.Spoilers
-import android.content.Intent
-import com.launcher.tv.player.PlayerActivity
 import com.launcher.tv.dream.ScreensaverActivity
+import com.launcher.tv.player.PlayerActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -877,8 +877,10 @@ class OverlayState(quick: Boolean = false) {
     var phone by mutableStateOf(false)
     var settings by mutableStateOf(false)
     var account by mutableStateOf(false)
+
     /** Who's watching. */
     var profiles by mutableStateOf(false)
+
     /** A title whose Simkl page is shown as a QR code. */
     var simklLink by mutableStateOf<MediaItem?>(null)
 }

@@ -1,9 +1,18 @@
 package com.launcher.tv.ui
 
+import android.graphics.Color as AndroidColor
+import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
+import android.widget.FrameLayout
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.Density
 import com.android.resources.ScreenOrientation
+import com.launcher.tv.alerts.AlertOverlay
+import com.launcher.tv.alerts.LiveAlert
+import com.launcher.tv.alerts.OverlayCard
 import com.launcher.tv.data.AppEntry
 import com.launcher.tv.data.AppsRepository
 import com.launcher.tv.data.HomeData
@@ -12,24 +21,15 @@ import com.launcher.tv.data.MediaKind
 import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.TeamInfo
 import com.launcher.tv.data.history.HistoryEntry
-import android.graphics.Color as AndroidColor
-import android.graphics.drawable.GradientDrawable
-import android.view.Gravity
-import android.widget.FrameLayout
-import com.launcher.tv.alerts.AlertOverlay
-import com.launcher.tv.dream.ScreensaverLayout
-import com.launcher.tv.alerts.LiveAlert
-import com.launcher.tv.alerts.OverlayCard
 import com.launcher.tv.data.iptv.ChannelCandidate
+import com.launcher.tv.data.iptv.CheckRow
 import com.launcher.tv.data.iptv.IptvChannel
+import com.launcher.tv.data.iptv.ProbeResult
 import com.launcher.tv.data.sports.GameDetail
 import com.launcher.tv.data.sports.GameDetails
+import com.launcher.tv.dream.ScreensaverLayout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.fillMaxSize
-import com.launcher.tv.data.iptv.CheckRow
-import com.launcher.tv.data.iptv.ProbeResult
 import org.junit.Rule
 import org.junit.Test
 
@@ -54,9 +54,13 @@ class HomeScreenshotTest {
 
     // ---- Rows layout (default) ----
     @Test fun rowsHome() = rows(HomeTab.FOR_YOU, null)
+
     @Test fun rowsLiveGame() = rows(HomeTab.FOR_YOU, "g-espn-lal")
+
     @Test fun rowsSports() = rows(HomeTab.SPORTS, "g-espn-ne")
+
     @Test fun rowsRailOpen() = rows(HomeTab.FOR_YOU, null, railOpen = true)
+
     /** A game shrunk into the picture-in-picture window: Now Playing card on top. */
     @Test fun rowsNowPlaying() = rows(HomeTab.FOR_YOU, "now-playing", pip = "Patriots @ Bills · ESPN")
 
@@ -76,9 +80,13 @@ class HomeScreenshotTest {
 
     // ---- Aura layout (glass over a photograph; a painted sky here, since tests have no internet) ----
     @Test fun auraHome() = aura(HomeTab.FOR_YOU, null)
+
     @Test fun auraLiveGame() = aura(HomeTab.FOR_YOU, "g-espn-lal")
+
     @Test fun auraSports() = aura(HomeTab.SPORTS, "g-espn-ne")
+
     @Test fun auraNight() = aura(HomeTab.TV, null, phase = SkyPhase.NIGHT, hour = 23)
+
     @Test fun auraControlCenter() = aura(HomeTab.FOR_YOU, null, quick = true)
 
     private fun aura(tab: HomeTab, selected: String?, quick: Boolean = false, phase: SkyPhase = SkyPhase.DUSK, hour: Int = 18) {
@@ -104,6 +112,7 @@ class HomeScreenshotTest {
 
     // ---- Photo screensaver (a painted sky stands in for the photograph) ----
     @Test fun saverQuote() = saver(com.launcher.tv.dream.SaverStyle.QUOTES)
+
     @Test fun saverPhoto() = saver(com.launcher.tv.dream.SaverStyle.PHOTOS)
 
     private fun saver(style: com.launcher.tv.dream.SaverStyle) {
@@ -143,8 +152,11 @@ class HomeScreenshotTest {
 
     // ---- Tiles layout ----
     @Test fun forYou() = snap(HomeTab.FOR_YOU, null)
+
     @Test fun forYouLiveGame() = snap(HomeTab.FOR_YOU, "g-espn-lal")
+
     @Test fun sports() = snap(HomeTab.SPORTS, "g-espn-ne")
+
     @Test fun tvAndMovies() = snap(HomeTab.TV, null)
 
     /** Provider connected: the live game knows its channel and offers Start over / Channels. */

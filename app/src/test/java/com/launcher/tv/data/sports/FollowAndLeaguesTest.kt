@@ -1,12 +1,12 @@
 package com.launcher.tv.data.sports
 
+import java.time.Instant
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Instant
 
 class FollowAndLeaguesTest {
     @Test fun defaultsAreYourTeams() {

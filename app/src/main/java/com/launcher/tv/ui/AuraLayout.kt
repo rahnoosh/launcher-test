@@ -75,14 +75,14 @@ import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import com.launcher.tv.R
 import com.launcher.tv.data.AppsRepository
-import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.Spoilers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.launcher.tv.data.SportsEvent
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** A fixed clock for screenshots; null means the real time. */
 val LocalFixedNow = staticCompositionLocalOf<Long?> { null }

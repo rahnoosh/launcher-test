@@ -71,10 +71,11 @@ android {
         jvmTarget = "17"
     }
     lint {
-        // Don't block sideload builds on lint warnings.
+        // Lint isn't part of the build, so it never blocks a sideload build. Run on its own
+        // (./gradlew lintRelease, or the Android lint workflow) it fails on errors, not warnings.
         checkReleaseBuilds = false
-        abortOnError = false
-        // Plain-text report too (build/reports/lint-results-<variant>.txt), printed by the Lint workflow.
+        abortOnError = true
+        // Plain-text report too (build/reports/lint-results-<variant>.txt), printed by the workflow.
         textReport = true
     }
     buildFeatures {

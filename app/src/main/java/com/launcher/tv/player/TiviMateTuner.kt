@@ -4,10 +4,10 @@ import android.content.Context
 import com.launcher.tv.data.AppsRepository
 import dadb.AdbKeyPair
 import dadb.Dadb
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import java.io.File
 
 /**
  * EXPERIMENTAL one-press tuning for TiviMate.

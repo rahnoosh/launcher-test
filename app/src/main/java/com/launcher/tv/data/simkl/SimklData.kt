@@ -5,13 +5,13 @@ import com.launcher.tv.data.MediaKind
 import com.launcher.tv.data.arr
 import com.launcher.tv.data.obj
 import com.launcher.tv.data.str
+import java.time.Instant
+import java.time.OffsetDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.longOrNull
-import java.time.Instant
-import java.time.OffsetDateTime
 
 /** One title in the user's Simkl library, trimmed to what HomeBase shows. */
 @Serializable
@@ -56,8 +56,10 @@ data class SimklAiring(val simkl: Long, val atMillis: Long, val season: Int?, va
  */
 object SimklData {
     val TYPES = listOf("shows", "anime", "movies")
+
     /** Activities blocks for each all-items bucket. */
     private val ACTIVITY_BLOCK = mapOf("shows" to "tv_shows", "anime" to "anime", "movies" to "movies")
+
     /** Older client ids see "notinteresting" where newer ones see "dropped". */
     private val STATUSES = listOf("watching", "plantowatch", "hold", "completed", "dropped", "notinteresting")
 

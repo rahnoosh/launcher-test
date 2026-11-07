@@ -7,6 +7,11 @@ import com.launcher.tv.data.TeamInfo
 import com.launcher.tv.data.arr
 import com.launcher.tv.data.obj
 import com.launcher.tv.data.str
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -14,11 +19,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 /**
  * Sports schedules from free, keyless (or free-key) APIs:
@@ -35,6 +35,7 @@ object SportsRepository {
 
     /** Numbered events ("UFC 322: ..."), which were the pay-per-views. */
     private val UFC_BIG_EVENT = Regex("""^UFC \d+""")
+
     /** TheSportsDB league id for boxing. */
     private const val SPORTSDB_BOXING = "4445"
 

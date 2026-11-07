@@ -1,5 +1,6 @@
 package com.launcher.tv.phone
 
+import java.net.Socket
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -7,7 +8,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.net.Socket
 
 class PhoneServerTest {
     private fun raw(port: Int, request: String): String =

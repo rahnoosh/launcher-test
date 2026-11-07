@@ -1,10 +1,10 @@
 package com.launcher.tv.data
 
 import android.content.Context
+import com.launcher.tv.data.simkl.SimklClient
 import com.launcher.tv.data.sports.EventFollow
 import com.launcher.tv.data.sports.FollowStore
 import com.launcher.tv.data.sports.SportsRepository
-import com.launcher.tv.data.simkl.SimklClient
 import com.launcher.tv.data.trakt.TraktClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

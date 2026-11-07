@@ -4,18 +4,19 @@ import android.annotation.SuppressLint
 import android.content.Context
 import com.launcher.tv.data.MediaItem
 import com.launcher.tv.data.MediaKind
+import java.io.File
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.builtins.ListSerializer
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import java.io.File
-import java.util.UUID
 
 /** All configured providers (Xtream and M3U), searched together. */
 class IptvLibrary private constructor(private val context: Context) {
     private val prefs = context.getSharedPreferences("iptv_sources", Context.MODE_PRIVATE)
+
     @Volatile private var built: List<IptvSource>? = null
 
     fun configs(): List<SourceConfig> {
@@ -95,7 +96,8 @@ class IptvLibrary private constructor(private val context: Context) {
     companion object {
         // Holds only the application context, which lives as long as the process anyway.
         @SuppressLint("StaticFieldLeak")
-        @Volatile private var instance: IptvLibrary? = null
+        @Volatile
+        private var instance: IptvLibrary? = null
         fun get(context: Context): IptvLibrary =
             instance ?: synchronized(this) { instance ?: IptvLibrary(context.applicationContext).also { instance = it } }
 

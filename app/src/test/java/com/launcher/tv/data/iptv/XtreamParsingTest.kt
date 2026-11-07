@@ -1,12 +1,12 @@
 package com.launcher.tv.data.iptv
 
+import java.util.Base64
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.Base64
 
 class XtreamParsingTest {
     @Test fun liveStreamsWithMixedTypes() {

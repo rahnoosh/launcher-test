@@ -54,12 +54,12 @@ import com.launcher.tv.ui.darker
 import com.launcher.tv.ui.leagueColor
 import com.launcher.tv.ui.mainColor
 import com.launcher.tv.ui.seedColor
-import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import kotlinx.coroutines.delay
 
 /** One full-screen picture in the slideshow. */
 data class Slide(val key: String, val kicker: String, val title: String, val subtitle: String, val imageUrl: String?, val colors: List<Color>)

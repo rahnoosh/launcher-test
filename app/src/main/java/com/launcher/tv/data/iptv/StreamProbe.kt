@@ -1,12 +1,12 @@
 package com.launcher.tv.data.iptv
 
 import com.launcher.tv.data.Http
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okio.BufferedSource
-import java.util.concurrent.TimeUnit
 
 /** How one stream behaved when we tried it. */
 data class ProbeResult(

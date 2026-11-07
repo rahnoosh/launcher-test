@@ -56,7 +56,6 @@ import com.launcher.tv.R
 import com.launcher.tv.data.HomeData
 import com.launcher.tv.data.Spoilers
 import com.launcher.tv.system.SleepTimer
-import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -64,6 +63,7 @@ import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.coroutines.delay
 
 /**
  * Aura-style Control Center: the time large on the left with what's on tonight, glass tiles on the

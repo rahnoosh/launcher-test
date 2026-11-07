@@ -6,6 +6,13 @@ import com.launcher.tv.data.HttpException
 import com.launcher.tv.data.arr
 import com.launcher.tv.data.obj
 import com.launcher.tv.data.str
+import java.io.File
+import java.net.URLEncoder
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Base64
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -19,13 +26,6 @@ import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.encodeToStream
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
-import java.io.File
-import java.net.URLEncoder
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Base64
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Xtream Codes provider (player_api.php). Catalogues are downloaded once a day, streamed
@@ -57,7 +57,9 @@ class XtreamClient(context: Context, override val config: SourceConfig.Xtream) :
 
     private class Cached<T>(val name: String, val serializer: KSerializer<List<T>>, val action: String) {
         val mutex = Mutex()
+
         @Volatile var items: List<T>? = null
+
         @Volatile var loadedAt = 0L
     }
 
@@ -66,6 +68,7 @@ class XtreamClient(context: Context, override val config: SourceConfig.Xtream) :
     private val seriesCache = Cached("series", ListSerializer(XtreamSeries.serializer()), "get_series")
     private val vodCache = Cached("vod", ListSerializer(XtreamVod.serializer()), "get_vod_streams")
     private val episodeCache = ConcurrentHashMap<String, List<XtreamEpisode>>()
+
     @Volatile private var mapped: Pair<Long, List<IptvChannel>>? = null
 
     override suspend fun channels(): List<IptvChannel> {

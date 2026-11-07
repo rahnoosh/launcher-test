@@ -3,20 +3,21 @@ package com.launcher.tv.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.launcher.tv.alerts.AlertSettings
 import com.launcher.tv.data.AppEntry
 import com.launcher.tv.data.AppsRepository
 import com.launcher.tv.data.HomeData
 import com.launcher.tv.data.HomeRepository
-import com.launcher.tv.data.history.HistoryEntry
-import com.launcher.tv.data.history.WatchHistory
 import com.launcher.tv.data.MediaItem
 import com.launcher.tv.data.SportsEvent
+import com.launcher.tv.data.history.HistoryEntry
+import com.launcher.tv.data.history.WatchHistory
 import com.launcher.tv.data.iptv.ChannelCandidate
 import com.launcher.tv.data.iptv.ChannelFinder
 import com.launcher.tv.data.iptv.IptvLibrary
 import com.launcher.tv.data.iptv.SourceConfig
+import com.launcher.tv.data.simkl.SimklClient.Sync as SimklSync
 import com.launcher.tv.data.trakt.TraktClient
-import com.launcher.tv.alerts.AlertSettings
 import com.launcher.tv.player.Watch
 import com.launcher.tv.service.HomeButtonService
 import com.launcher.tv.system.SleepTimer
@@ -27,7 +28,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import com.launcher.tv.data.simkl.SimklClient.Sync as SimklSync
 
 sealed interface TraktState {
     data object NotConfigured : TraktState
@@ -39,6 +39,7 @@ sealed interface TraktState {
 sealed interface SimklState {
     data object NotConfigured : SimklState
     data object SignedOut : SimklState
+
     /** [qrUrl] opens Simkl's approval page with the code already filled in. */
     data class AwaitingCode(val userCode: String, val url: String, val qrUrl: String) : SimklState
     data object SignedIn : SimklState

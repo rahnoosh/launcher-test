@@ -11,6 +11,7 @@ import com.launcher.tv.data.Http
 import com.launcher.tv.data.HttpException
 import com.launcher.tv.data.obj
 import com.launcher.tv.data.str
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.Request
-import java.io.File
 
 /**
  * Self-update: CI publishes every signed build of the default branch to a rolling GitHub release

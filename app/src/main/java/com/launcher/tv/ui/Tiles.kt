@@ -35,6 +35,7 @@ sealed interface Tile {
             Role.UPCOMING -> item.timeMillis?.let(::friendlyTime) ?: item.subtitle
             Role.WATCHLIST -> "On your watchlist"
         }
+
         /** "NEW" badge: next-up episode that aired in the last week. */
         val isNew get() = role == Role.UP_NEXT && item.timeMillis?.let { System.currentTimeMillis() - it < 7 * 86_400_000L } == true
     }

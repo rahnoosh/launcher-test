@@ -1,12 +1,12 @@
 package com.launcher.tv.data.sky
 
+import java.time.Instant
+import java.util.Locale
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.time.Instant
-import java.util.Locale
 
 class SkyDataTest {
     @Test

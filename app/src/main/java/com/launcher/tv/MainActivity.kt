@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val vm: HomeViewModel by viewModels()
+
     /** The profile this screen was built for; another one means rebuilding it. */
     private var profile: String = Profiles.MAIN
 

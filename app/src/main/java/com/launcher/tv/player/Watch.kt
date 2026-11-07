@@ -13,9 +13,11 @@ import com.launcher.tv.data.iptv.IptvLibrary
 object Watch {
     sealed interface Result {
         data class Playing(val what: String) : Result
+
         /** Several plausible channels and nothing remembered: let the user pick. */
         data class Choose(val candidates: List<ChannelCandidate>) : Result
         data class OpenedTiviMate(val why: String?) : Result
+
         /** Nothing to play, e.g. no channel kept a recording of the game. */
         data class Unavailable(val why: String) : Result
     }
