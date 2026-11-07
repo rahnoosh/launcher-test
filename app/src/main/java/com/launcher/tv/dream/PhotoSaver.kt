@@ -114,11 +114,12 @@ fun PhotoSaver(data: HomeData, style: SaverStyle) {
     val now = System.currentTimeMillis()
     val phase = skyPhase(now, null, null)
     // Decode one photograph at a time (they're big); a painted sky until the first is ready.
-    val photo by produceState<SaverPhoto?>(initialValue = null, files, index) {
+    var photo by remember { mutableStateOf<SaverPhoto?>(null) }
+    LaunchedEffect(files, index) {
         val f = files.getOrNull(index % files.size.coerceAtLeast(1))
         if (f == null) {
-            value = null
-            return@produceState
+            photo = null
+            return@LaunchedEffect
         }
         val decoded = withContext(Dispatchers.IO) {
             runCatching {
@@ -127,7 +128,7 @@ fun PhotoSaver(data: HomeData, style: SaverStyle) {
             }.getOrNull()
         }
         // One that won't decode keeps the previous photograph up.
-        if (decoded != null) value = decoded
+        if (decoded != null) photo = decoded
     }
     val fallback = remember(phase) { SaverPhoto(buildSky(null, phase, null), null, null) }
     PhotoSaverLayout(data, style, photo ?: fallback, quote = Quotes.all[(index + (now / 86_400_000L).toInt()) % Quotes.all.size], slide = index)
