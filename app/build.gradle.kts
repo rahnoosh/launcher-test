@@ -74,6 +74,8 @@ android {
         // Don't block sideload builds on lint warnings.
         checkReleaseBuilds = false
         abortOnError = false
+        // Plain-text report too (build/reports/lint-results-<variant>.txt), printed by the Lint workflow.
+        textReport = true
     }
     buildFeatures {
         compose = true

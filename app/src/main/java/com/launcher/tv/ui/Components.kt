@@ -91,7 +91,7 @@ fun Color.darker(f: Float) = lerp(this, Color.Black, f)
 // ---------- team crest ----------
 
 @Composable
-fun Crest(team: TeamInfo, size: Dp, ring: Color = Color.White.copy(alpha = 0.18f)) {
+fun Crest(team: TeamInfo, size: Dp) {
     Box(
         Modifier.size(size).clip(CircleShape)
             .background(Brush.linearGradient(listOf(team.mainColor(), team.mainColor().darker(0.35f)))),

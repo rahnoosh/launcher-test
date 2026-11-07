@@ -11,7 +11,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
-import java.io.File
 
 @Serializable
 data class HistoryEntry(

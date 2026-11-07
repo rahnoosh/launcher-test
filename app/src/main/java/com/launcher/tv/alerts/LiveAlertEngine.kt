@@ -14,7 +14,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
-import java.io.File
 
 data class LiveAlert(
     val key: String,

@@ -12,7 +12,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
-import java.io.File
 
 /**
  * Loads all home-screen sections in parallel and caches the result on disk.

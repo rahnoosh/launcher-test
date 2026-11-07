@@ -386,7 +386,7 @@ class PhoneApi(context: Context, private val auth: PhoneAuth, private val page: 
             put("tivimateTuning", TiviMateTuner.enabled(app))
             put("layout", layout())
             put("watchApp", com.launcher.tv.player.WatchApps.preferred(app))
-                put("saver", com.launcher.tv.dream.SaverStyle.current(app).key)
+            put("saver", com.launcher.tv.dream.SaverStyle.current(app).key)
         }
         putJsonObject("channelChoices") {
             app.getSharedPreferences("channel_choices", Context.MODE_PRIVATE).all.forEach { (k, v) -> if (v is String) put(k, v) }

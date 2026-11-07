@@ -1,7 +1,6 @@
 package com.launcher.tv.data.trakt
 
 import android.content.Context
-import com.launcher.tv.BuildConfig
 import com.launcher.tv.data.Http
 import com.launcher.tv.data.HttpException
 import com.launcher.tv.data.MediaItem

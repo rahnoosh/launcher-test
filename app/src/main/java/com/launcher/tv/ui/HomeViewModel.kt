@@ -15,15 +15,11 @@ import com.launcher.tv.data.iptv.ChannelCandidate
 import com.launcher.tv.data.iptv.ChannelFinder
 import com.launcher.tv.data.iptv.IptvLibrary
 import com.launcher.tv.data.iptv.SourceConfig
-import com.launcher.tv.data.iptv.XtreamClient
 import com.launcher.tv.data.trakt.TraktClient
 import com.launcher.tv.alerts.AlertSettings
 import com.launcher.tv.player.Watch
 import com.launcher.tv.service.HomeButtonService
 import com.launcher.tv.system.SleepTimer
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow

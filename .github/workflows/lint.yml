@@ -1,0 +1,68 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-lint:
+    name: Android lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      # Report only: the build sets abortOnError = false so lint never blocks a sideload build.
+      - name: Android lint (release variant)
+        run: ./gradlew --no-daemon :app:lintRelease
+      - name: Lint report
+        if: always()
+        run: cat app/build/reports/lint-results-*.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-lint-report
+          path: app/build/reports/lint-results-*
+          if-no-files-found: ignore
+
+  osv-scanner:
+    name: Dependency vulnerabilities (osv-scanner)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      # The repo keeps no Gradle lockfile, so write one for this run: the exact versions of
+      # everything that ships in the APK (the release runtime classpath), which osv-scanner reads.
+      - name: Resolve the libraries in the APK
+        run: |
+          cat > "$RUNNER_TEMP/lock-apk.gradle" <<'GRADLE'
+          allprojects {
+              configurations.matching { it.name == "releaseRuntimeClasspath" }.configureEach {
+                  resolutionStrategy.activateDependencyLocking()
+              }
+          }
+          GRADLE
+          ./gradlew --no-daemon -q --init-script "$RUNNER_TEMP/lock-apk.gradle" \
+            :app:dependencies --configuration releaseRuntimeClasspath --write-locks
+          cat app/gradle.lockfile
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+      - name: osv-scanner
+        env:
+          GOTOOLCHAIN: auto
+        run: |
+          go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.7.0
+          "$(go env GOPATH)/bin/osv-scanner" scan source --lockfile app/gradle.lockfile

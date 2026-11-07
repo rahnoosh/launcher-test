@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import com.launcher.tv.data.AppsRepository
 import com.launcher.tv.data.MediaItem
-import com.launcher.tv.data.MediaKind
 import com.launcher.tv.data.SportsEvent
 import com.launcher.tv.data.iptv.ChannelCandidate
 import com.launcher.tv.data.iptv.ChannelFinder

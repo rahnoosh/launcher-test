@@ -91,7 +91,7 @@ object UpdateManager {
      * installer has been started (Android then asks to confirm).
      */
     suspend fun install(context: Context): String? = lock.withLock {
-        val info = _state.value.available ?: check(force = true) ?: return "HomeBase is up to date (${currentVersion})"
+        val info = _state.value.available ?: check(force = true) ?: return "HomeBase is up to date ($currentVersion)"
         if (!canInstall(context)) {
             openInstallPermission(context)
             return "Allow HomeBase to install apps (the switch that just opened), then choose Update again"

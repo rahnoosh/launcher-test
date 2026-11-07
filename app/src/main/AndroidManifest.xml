@@ -24,6 +24,10 @@
         <package android:name="com.nuvio.app" />
     </queries>
 
+    <!--
+      Cleartext HTTP is on because most IPTV providers (Xtream / M3U playlists, EPG, the streams
+      TiviMate hands to the player) are plain http:// on hosts the user types in.
+    -->
     <application
         android:name=".LauncherApp"
         android:allowBackup="false"

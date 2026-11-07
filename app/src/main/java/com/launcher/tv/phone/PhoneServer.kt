@@ -178,7 +178,7 @@ class PhoneServer(private val handler: (Request) -> Response) {
                     ch == '"' -> append("\\\"")
                     ch == '\\' -> append("\\\\")
                     ch == '\n' -> append("\\n")
-                    ch < ' ' -> append(String.format("\\u%04x", ch.code))
+                    ch < ' ' -> append("\\u").append(ch.code.toString(16).padStart(4, '0'))
                     else -> append(ch)
                 }
             }

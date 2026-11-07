@@ -80,7 +80,6 @@ import com.launcher.tv.data.iptv.ChannelCandidate
 import com.launcher.tv.data.iptv.CheckRow
 import com.launcher.tv.data.Spoilers
 import android.content.Intent
-import android.provider.Settings
 import com.launcher.tv.player.PlayerActivity
 import com.launcher.tv.dream.ScreensaverActivity
 import kotlinx.coroutines.delay
