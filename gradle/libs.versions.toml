@@ -15,6 +15,8 @@ junit = "4.13.2"
 paparazzi = "1.3.5"
 dadb = "1.2.10"
 zxing = "3.5.3"
+# Not used directly: media3 brings it in. Pinned past GHSA-xxph-c9ww-hj94 (see app/build.gradle.kts).
+guava = "33.7.2-android"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }

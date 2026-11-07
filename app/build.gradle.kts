@@ -105,4 +105,11 @@ dependencies {
     implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
+
+    constraints {
+        // media3 brings in Guava; before 33.7.2 it has GHSA-xxph-c9ww-hj94 (found by osv-scanner in the Lint workflow).
+        implementation("com.google.guava:guava:${libs.versions.guava.get()}") {
+            because("GHSA-xxph-c9ww-hj94")
+        }
+    }
 }

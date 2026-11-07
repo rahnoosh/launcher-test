@@ -1,5 +1,6 @@
 package com.launcher.tv.player
 
+import android.annotation.SuppressLint
 import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
@@ -205,6 +206,9 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    // Activity.dispatchKeyEvent is public API: lint's RestrictedApi error comes from androidx.core
+    // marking its own override @RestrictTo, a known false positive.
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         // Let the controller handle D-pad / media keys; Back closes the controls first, then the player.
         if (event.keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN && playerView.isControllerFullyVisible) {

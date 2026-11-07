@@ -1,5 +1,6 @@
 package com.launcher.tv.data.iptv
 
+import android.annotation.SuppressLint
 import android.content.Context
 import com.launcher.tv.data.MediaItem
 import com.launcher.tv.data.MediaKind
@@ -92,6 +93,8 @@ class IptvLibrary private constructor(private val context: Context) {
         try { block() } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
 
     companion object {
+        // Holds only the application context, which lives as long as the process anyway.
+        @SuppressLint("StaticFieldLeak")
         @Volatile private var instance: IptvLibrary? = null
         fun get(context: Context): IptvLibrary =
             instance ?: synchronized(this) { instance ?: IptvLibrary(context.applicationContext).also { instance = it } }

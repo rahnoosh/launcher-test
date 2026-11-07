@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -251,7 +252,7 @@ fun AuraLayout(
 @Composable
 private fun AuraHeader(state: HomeUiState) {
     val fixed = LocalFixedNow.current
-    var now by remember { mutableStateOf(fixed ?: System.currentTimeMillis()) }
+    var now by remember { mutableLongStateOf(fixed ?: System.currentTimeMillis()) }
     LaunchedEffect(fixed) {
         if (fixed == null) while (true) { now = System.currentTimeMillis(); delay(15_000) }
     }

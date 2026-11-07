@@ -1,5 +1,6 @@
 package com.launcher.tv
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -41,6 +42,9 @@ class MainActivity : ComponentActivity() {
         return true
     }
 
+    // Activity.dispatchKeyEvent is public API: lint's RestrictedApi error comes from androidx.core
+    // marking its own override @RestrictTo, a known false positive.
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         // Remotes with a Profile button open Who's watching.
         if (event.keyCode == KeyEvent.KEYCODE_PROFILE_SWITCH) {

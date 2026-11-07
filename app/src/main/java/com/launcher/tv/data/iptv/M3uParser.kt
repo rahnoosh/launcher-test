@@ -22,7 +22,7 @@ object M3uParser {
         var index = 0
 
         for (raw in lines) {
-            val line = raw.trim().removePrefix("﻿")
+            val line = raw.trim().removePrefix("\uFEFF")
             when {
                 line.isEmpty() -> Unit
                 line.startsWith("#EXTM3U") -> {

@@ -10,7 +10,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -285,7 +284,7 @@ private val bottomScrim = Brush.verticalGradient(0.35f to Color.Transparent, 1f 
 
 @Composable
 private fun RowCardFace(tile: Tile) {
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize()) {
         when (tile) {
             is Tile.Resume -> {
                 Art(tile.entry.imageUrl ?: tile.entry.posterUrl, tile.title)

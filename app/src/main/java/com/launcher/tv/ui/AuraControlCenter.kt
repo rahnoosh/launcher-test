@@ -21,7 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -73,7 +73,7 @@ import kotlin.math.sin
 @Composable
 fun BoxScope.AuraControlCenter(state: HomeUiState, onAction: (QuickAction) -> Unit, onAccounts: () -> Unit) {
     val fixed = LocalFixedNow.current
-    var now by remember { mutableStateOf(fixed ?: System.currentTimeMillis()) }
+    var now by remember { mutableLongStateOf(fixed ?: System.currentTimeMillis()) }
     LaunchedEffect(fixed) {
         if (fixed == null) while (true) { now = System.currentTimeMillis(); delay(10_000) }
     }

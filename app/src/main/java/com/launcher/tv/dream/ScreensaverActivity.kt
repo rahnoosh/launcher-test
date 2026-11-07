@@ -1,5 +1,6 @@
 package com.launcher.tv.dream
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -26,6 +27,9 @@ class ScreensaverActivity : ComponentActivity() {
         }
     }
 
+    // Activity.dispatchKeyEvent is public API: lint's RestrictedApi error comes from androidx.core
+    // marking its own override @RestrictTo, a known false positive.
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         // Ignore the tail of the key press that opened it.
         if (event.action == KeyEvent.ACTION_UP && System.currentTimeMillis() - openedAt > 800) finish()

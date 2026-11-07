@@ -24,6 +24,13 @@ class M3uAndGuideTest {
         http://line.example.com:8080/movie/joe/secret/991.mp4
     """.trimIndent()
 
+    @Test fun skipsByteOrderMark() {
+        // Playlists saved by Windows tools often start with a UTF-8 byte-order mark.
+        val r = M3uParser.parse(("\uFEFF" + playlist).lineSequence(), "p1")
+        assertEquals("http://epg.example.com/guide.xml.gz", r.epgUrl)
+        assertEquals(2, r.channels.size)
+    }
+
     @Test fun parsesChannelsAndVod() {
         val r = M3uParser.parse(playlist.lineSequence(), "p1")
         assertEquals("http://epg.example.com/guide.xml.gz", r.epgUrl)

@@ -116,12 +116,18 @@ fun PhotoSaver(data: HomeData, style: SaverStyle) {
     // Decode one photograph at a time (they're big); a painted sky until the first is ready.
     val photo by produceState<SaverPhoto?>(initialValue = null, files, index) {
         val f = files.getOrNull(index % files.size.coerceAtLeast(1))
-        value = if (f == null) null else withContext(Dispatchers.IO) {
+        if (f == null) {
+            value = null
+            return@produceState
+        }
+        val decoded = withContext(Dispatchers.IO) {
             runCatching {
                 val bmp: Bitmap = BitmapFactory.decodeFile(f.file.path) ?: return@runCatching null
                 SaverPhoto(buildSky(bmp, phase, f.credit), f.place, f.credit)
             }.getOrNull()
-        } ?: value
+        }
+        // One that won't decode keeps the previous photograph up.
+        if (decoded != null) value = decoded
     }
     val fallback = remember(phase) { SaverPhoto(buildSky(null, phase, null), null, null) }
     PhotoSaverLayout(data, style, photo ?: fallback, quote = Quotes.all[(index + (now / 86_400_000L).toInt()) % Quotes.all.size], slide = index)
